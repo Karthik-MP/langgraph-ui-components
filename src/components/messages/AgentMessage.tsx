@@ -2,6 +2,7 @@ import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { BotMessageSquare, Loader2 } from "lucide-react";
 import React from "react";
+import { AgentMarkdown } from "./AgentMarkdown";
 
 function AgentMessage({
   message,
@@ -24,7 +25,7 @@ function AgentMessage({
       <div className="flex flex-1 flex-col gap-1 items-start min-w-0">
         <span className="text-zinc-500 text-xs ml-1">Agent</span>
         <div className="text-sm font-normal leading-relaxed rounded-2xl rounded-tl-none px-4 py-2 text-left bg-zinc-900 border border-zinc-800 text-zinc-200 shadow-sm max-w-full break-words overflow-wrap-anywhere">
-          {content || (
+          { content ? (<AgentMarkdown content={content} />) : (
             <>
               <div className="flex items-center gap-2 text-zinc-500">
                 <Loader2 className="animate-spin" size={16} />
