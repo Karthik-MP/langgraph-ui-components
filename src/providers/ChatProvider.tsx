@@ -2,6 +2,7 @@ import React from "react";
 import { ChatRuntimeProvider } from "./ChatRuntime";
 import { ThreadProvider } from "./Thread";
 import { StreamProvider } from "./Stream";
+import { FileProvider } from "./FileProvider";
 export interface ChatIdentity {
   user_id: string;
   org_id: string;
@@ -28,7 +29,9 @@ export function ChatProvider({
         identity={identity}
       >
         <ThreadProvider>
-          <StreamProvider>{children}</StreamProvider>
+          <StreamProvider>
+            <FileProvider>{children}</FileProvider>
+          </StreamProvider>
         </ThreadProvider>
       </ChatRuntimeProvider>
     </React.Suspense>

@@ -19,12 +19,12 @@ function HumanMessage({ message }: { message: Message }) {
   }
 
   return (
-    <div className="flex items-end gap-3 justify-end">
-      <div className="flex flex-1 flex-col gap-1 items-end">
+    <div className="flex items-end gap-3 justify-end w-full">
+      <div className="flex flex-1 flex-col gap-1 items-end min-w-0">
         <span className="text-zinc-500 text-xs mr-1">You</span>
 
         {textContent && (
-          <div className="text-base font-normal leading-relaxed rounded-2xl rounded-tr-none px-4 py-3 bg-blue-500 text-white shadow-sm max-w-[90%]">
+          <div className="text-base font-normal leading-relaxed rounded-2xl rounded-tr-none px-4 py-3 bg-blue-500 text-white shadow-sm max-w-full break-words overflow-wrap-anywhere">
             {textContent}
           </div>
         )}

@@ -13,7 +13,7 @@ function AgentMessage({
   const content = getContentString(message?.content);
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-3 w-full">
       <div
         className="rounded-full size-8 shrink-0 bg-zinc-800 border border-zinc-700 flex items-center justify-center p-2"
         data-alt="AI Avatar"
@@ -21,9 +21,9 @@ function AgentMessage({
         <BotMessageSquare className="text-sm" color="white" />
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 items-start">
+      <div className="flex flex-1 flex-col gap-1 items-start min-w-0">
         <span className="text-zinc-500 text-xs ml-1">Agent</span>
-        <div className="text-sm font-normal leading-relaxed rounded-2xl rounded-tl-none px-4 py-2 text-left bg-zinc-900 border border-zinc-800 text-zinc-200 shadow-sm max-w-[90%] min-w-25">
+        <div className="text-sm font-normal leading-relaxed rounded-2xl rounded-tl-none px-4 py-2 text-left bg-zinc-900 border border-zinc-800 text-zinc-200 shadow-sm max-w-full break-words overflow-wrap-anywhere">
           {content || (
             <>
               <div className="flex items-center gap-2 text-zinc-500">
