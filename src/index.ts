@@ -17,3 +17,4 @@ export { useFileProvider } from "./providers/FileProvider";
 // Types
 export type { ChatIdentity } from "./providers/ChatProvider";
 export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
+export type { FileInfo, Metadata } from "./types/types";

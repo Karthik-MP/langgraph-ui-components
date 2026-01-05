@@ -1,53 +1,57 @@
 import { v4 as uuidv4 } from "uuid";
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import ChatButton from "../../components/ChatButton";
 import { AnimatePresence, motion } from "framer-motion";
-import ChatInput, { type FileInfo } from "../../components/sidebar/ChatInput";
+import ChatInput from "../../components/sidebar/ChatInput";
 import ChatBody from "../../components/ChatBody";
-import { useThread } from "@/providers/Thread";
 import { useStreamContext } from "@/providers/Stream";
 import type { Message } from "@langchain/langgraph-sdk";
 import { X } from "lucide-react";
+import type { FileInfo } from "@/types/types";
+import { useFileProvider } from "@/providers/FileProvider";
 
 export default function Sidebar({
   header = "AI Assistant",
+  handleFileSelect,
+  callThisOnSubmit,
 }: {
   header?: string;
+  handleFileSelect?: (e: FormEvent) => void;
+  callThisOnSubmit?: () => Promise<FileInfo[] | void>;
 }) {
-  const { setConfiguration } = useThread();
-
-  useEffect(() => {
-    setConfiguration({ stage: "FILE_UPLOAD" });
-  }, [setConfiguration]);
 
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [fileInput, setFileInput] = useState<FileInfo[]>([]);
+  const { fileInput, setFileInput } = useFileProvider();
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
 
-  const handleSubmit = (e: FormEvent) => {
+  const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (input.trim().length === 0 || isLoading) return;
+    if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
+      return;
 
-    // Build content blocks including files
+    console.log("Submitting with input:", input);
+
+    // Call the custom upload and get the latest files
+    let latestFiles: FileInfo[] = fileInput;
+    if (callThisOnSubmit) {
+      const result = await callThisOnSubmit();
+      if (result && result.length > 0) latestFiles = result;
+    }
+
+    console.log("Using files for submission:", latestFiles);
+
     const contentBlocks = [
       ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-      // Add file attachments if any
-      ...fileInput.map((file) => ({
+      ...latestFiles.map((file) => ({
         type: "document" as const,
-        source: {
-          type: "base64" as const,
-          media_type: file.fileType,
-          data: file.fileData || "", // You need to add fileData to FileInfo
-        },
-        // Include filename for reference
+        ...file,
         cache_control: { type: "ephemeral" as const },
       })),
     ] as unknown as Message["content"];
-    // ...existing code...
 
     const newHumanMessage: Message = {
       id: uuidv4(),
@@ -68,12 +72,11 @@ export default function Sidebar({
       }
     );
 
-    // Clear inputs after submit
     setInput("");
     setFileInput([]);
   };
 
-  const handleFileSelect = async (
+  const defaultHandleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const files = event.target.files;
@@ -95,6 +98,7 @@ export default function Sidebar({
         return {
           fileName: file.name,
           fileType: file.type,
+          file: file,
           fileData: base64Data, // Add this to your FileInfo type
         };
       })
@@ -102,6 +106,8 @@ export default function Sidebar({
 
     setFileInput((prevFile) => [...prevFile, ...fileDetails]);
   };
+
+  const onFileSelect = handleFileSelect || defaultHandleFileSelect;
 
   return (
     <>
@@ -144,10 +150,10 @@ export default function Sidebar({
                   <ChatInput
                     input={input}
                     setInput={setInput}
-                    handleSubmit={handleSubmit}
+                    handleSubmit={defaultHandleSubmit}
                     isLoading={isLoading}
                     fileInput={fileInput}
-                    handleFileSelect={handleFileSelect}
+                    handleFileSelect={onFileSelect}
                     setFileInput={setFileInput}
                     onCancel={() => stream.stop?.()}
                   />
