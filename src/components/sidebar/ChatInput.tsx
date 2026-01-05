@@ -1,3 +1,4 @@
+import type { FileInfo } from "@/types/types";
 import { FileIcon, Paperclip, StepForward, X } from "lucide-react";
 import {
   type ChangeEvent,
@@ -5,12 +6,6 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-
-export type FileInfo = {
-  fileName: string;
-  fileType: string;
-  fileData?: string; // Base64 encoded file data
-};
 
 export default function ChatInput({
   input,

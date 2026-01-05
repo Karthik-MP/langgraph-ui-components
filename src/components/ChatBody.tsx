@@ -1,5 +1,5 @@
 import { useStreamContext } from "@/providers/Stream";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import AgentMessage from "./messages/AgentMessage";
 import HumanMessage from "./messages/HumanMessage";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
@@ -9,21 +9,12 @@ export default function ChatBodyComponent() {
   const stream = useStreamContext();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
-  const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
 
-  const memoMessages = useMemo(() => {
-    return [...(messages ?? []), ...optimisticMessages];
-  }, [messages, optimisticMessages]);
+  // Memoize messages with stable reference
+  const memoMessages = useMemo(() => messages ?? [], [messages]);
 
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const prevMessageCountRef = useRef(0);
-
-
-  useEffect(() => {
-    if (messages && messages.length > 0) {
-      setOptimisticMessages([]);
-    }
-  }, [messages]);
 
   // Auto-scroll only when new messages are added or content updates
   useEffect(() => {
