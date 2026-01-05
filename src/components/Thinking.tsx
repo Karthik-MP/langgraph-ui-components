@@ -7,12 +7,15 @@ function Thinking({ title, message, toolMessages }: {
   message: Message;
   toolMessages?: Message[];
 }) {
-  const [open, setOpen] = useState(false);
-  const contentRef = React.useRef("");
+  const [open, setOpen] = useState(true);
+  const content = message.content
+  ? getContentString(message.content)
+  : "";
+  // const contentRef = React.useRef("");
   
-  React.useEffect(() => {
-    contentRef.current = message.content ? getContentString(message.content) : "";
-  }, [message.content]);
+  // React.useEffect(() => {
+  //   contentRef.current = message.content ? getContentString(message.content) : "";
+  // }, [message.content]);
   
   if (!message?.id) return null;
 
@@ -59,7 +62,7 @@ function Thinking({ title, message, toolMessages }: {
         aria-labelledby="accordion-collapse-heading-1"
       >
         <div className="p-4 md:p-5 text-left space-y-3">
-          <p className="mb-2 text-body">{contentRef.current}</p>
+          <p className="mb-2 text-body">{content}</p>
           {toolMessages?.map((toolMsg) => (
             <div key={toolMsg.id} className="border-t border-zinc-700 pt-2 mt-2">
               <p className="text-body text-sm">{toolMsg.content ? getContentString(toolMsg.content) : ""}</p>

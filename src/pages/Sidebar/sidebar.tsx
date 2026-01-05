@@ -119,7 +119,7 @@ export default function Sidebar({
 
             {/* Sidebar */}
             <motion.aside
-              className="fixed right-0 top-0 z-50 h-screen w-130 bg-black flex flex-col text-white"
+              className="fixed right-0 top-0 z-50 h-screen w-[520px] bg-black flex flex-col text-white"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

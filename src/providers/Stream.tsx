@@ -69,19 +69,37 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     },
 
     onUpdateEvent: (data, options) => {
-      options.mutate(() => {
-        const updates: Partial<StateType> = {};
-        let hasUpdate = false;
+      // options.mutate(() => {
+      //   const updates: Partial<StateType> = {};
+      //   let hasUpdate = false;
 
-        Object.values(data).forEach((value) => {
-          if (typeof value === "object" && value !== null) {
-            Object.assign(updates, value);
-            hasUpdate = true;
-          }
+      //   Object.values(data).forEach((value) => {
+      //     if (typeof value === "object" && value !== null) {
+      //       Object.assign(updates, value);
+      //       hasUpdate = true;
+      //     }
+      //   });
+
+      //   return hasUpdate ? updates : {};
+      // });
+
+      // updates existing streaming object instead of re-creating
+      // options.mutate((prev) => ({
+      //   ...prev,
+      //   ...data,
+      // }));
+
+      if (data.messages) {
+        options.mutate((prev) => {
+          const incoming = Array.isArray(data.messages)
+            ? (data.messages as Message[])
+            : ([...prev.messages, data.messages as Message] as Message[]);
+          return ({
+            ...prev,
+            messages: incoming,
+          }) as Partial<StateType>;
         });
-
-        return hasUpdate ? updates : {};
-      });
+      }
     },
   });
 
