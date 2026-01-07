@@ -1,10 +1,10 @@
 import { useStreamContext } from "@/providers/Stream";
-import { useEffect, useMemo, useRef } from "react";
+import { Fragment, useEffect, useMemo, useRef } from "react";
 import AgentMessage from "./messages/AgentMessage";
 import HumanMessage from "./messages/HumanMessage";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
 import Thinking from "./Thinking";
-import { CustomComponentRender } from "./messages/CustomComponentRender";
+import CustomComponentRender from "./messages/CustomComponentRender";
 
 export default function ChatBodyComponent() {
   const stream = useStreamContext();
@@ -78,31 +78,30 @@ export default function ChatBodyComponent() {
             }
 
             // Check if there's text content to display
-            const hasTextContent = Array.isArray(msg.content) && msg.content.some(
-              (c: any) => c.type === "text" && c.text?.trim()
-            );
+            const hasTextContent =
+              Array.isArray(msg.content) &&
+              msg.content.some((c: any) => c.type === "text" && c.text?.trim());
 
-            return (
-              <>
-                {hasTextContent ? (
-                  <>
-                    <AgentMessage
-                      key={`${msg.id}-text`}
-                      message={msg}
-                      isStreaming={isStreamingThisMessage}
-                    />
-                    <CustomComponentRender message={msg} thread={stream} />
-                  </>
-                ) : (
-                  <Thinking
-                    key={msg.id}
-                    title="Agent Thinking"
+            if (hasTextContent) {
+              return (
+                <Fragment key={msg.id}>
+                  <AgentMessage
                     message={msg}
-                    toolMessages={toolMessages}
+                    isStreaming={isStreamingThisMessage}
                   />
-                )}
-              </>
-            );
+                  <CustomComponentRender message={msg} thread={stream} />
+                </Fragment>
+              );
+            } else {
+              return (
+                <Thinking
+                  key={msg.id}
+                  title="Agent Thinking"
+                  message={msg}
+                  toolMessages={toolMessages}
+                />
+              );
+            }
           }
 
           // Standalone tool messages (shouldn't happen in normal flow)
@@ -113,14 +112,13 @@ export default function ChatBodyComponent() {
           }
 
           return (
-            <>
+            <Fragment key={msg.id}>
               <CustomComponentRender message={msg} thread={stream} />
               <AgentMessage
-                key={msg.id}
                 message={msg}
                 isStreaming={isStreamingThisMessage}
               />
-            </>
+            </Fragment>
           );
         })
       )}
