@@ -19,13 +19,17 @@ function HumanMessage({ message }: { message: Message }) {
   }
 
   return (
-    <div className="flex items-end gap-3 justify-end w-full">
-      <div className="flex flex-1 flex-col gap-1 items-end min-w-0">
-        <span className="text-zinc-500 text-xs mr-1">You</span>
+    <div className="flex items-end gap-3 justify-end w-full group">
+      <div className="flex flex-1 flex-col gap-2 items-end min-w-0">
+        <span className="text-zinc-400 text-xs font-medium mr-1 opacity-80">
+          You
+        </span>
 
         {textContent && (
-          <div className="text-base font-normal leading-relaxed rounded-2xl rounded-tr-none px-4 py-3 bg-blue-500 text-white shadow-sm max-w-full break-words overflow-wrap-anywhere">
-            {textContent}
+          <div className="relative">
+            <div className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25 max-w-full break-words overflow-wrap-anywhere transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.01]">
+              {textContent}
+            </div>
           </div>
         )}
 
@@ -34,10 +38,12 @@ function HumanMessage({ message }: { message: Message }) {
             {documents.map((doc, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800"
+                className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
               >
-                <FileIcon size={16} className="text-blue-400 shrink-0" />
-                <span className="text-xs text-zinc-300 truncate">
+                <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover/file:bg-blue-500/20 transition-colors">
+                  <FileIcon size={16} className="text-blue-400 shrink-0" />
+                </div>
+                <span className="text-sm text-zinc-200 truncate font-medium">
                   {doc.source?.filename || `Document ${idx + 1}`}
                 </span>
               </div>
@@ -47,10 +53,10 @@ function HumanMessage({ message }: { message: Message }) {
       </div>
 
       <div
-        className="size-8 shrink-0 flex items-center justify-center"
+        className="size-9 shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 ring-2 ring-blue-400/20 group-hover:shadow-xl group-hover:shadow-blue-500/40 transition-all duration-200"
         data-alt="User Avatar"
       >
-        <CircleUser className="rounded-lg bg-blue-400 text-white" />
+        <CircleUser className="text-white" size={20} />
       </div>
     </div>
   );
