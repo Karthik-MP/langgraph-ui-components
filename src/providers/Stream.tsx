@@ -67,7 +67,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     onCustomEvent: (event, options) => {
       if (isUIMessage(event) || isRemoveUIMessage(event)) {
         options.mutate((prev) => {
-          console.log("UI Event received in StreamProvider:", event);
+          // console.log("UI Event received in StreamProvider:", event);
           const ui = uiMessageReducer(prev.ui ?? [], event);
           return { ...prev, ui };
         });
