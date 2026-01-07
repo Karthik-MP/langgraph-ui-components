@@ -4,6 +4,7 @@ import AgentMessage from "./messages/AgentMessage";
 import HumanMessage from "./messages/HumanMessage";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
 import Thinking from "./Thinking";
+import { CustomComponentRender } from "./messages/CustomComponentRender";
 
 export default function ChatBodyComponent() {
   const stream = useStreamContext();
@@ -76,13 +77,31 @@ export default function ChatBodyComponent() {
               nextIndex++;
             }
 
+            // Check if there's text content to display
+            const hasTextContent = Array.isArray(msg.content) && msg.content.some(
+              (c: any) => c.type === "text" && c.text?.trim()
+            );
+
             return (
-              <Thinking
-                key={msg.id}
-                title="Agent Thinking"
-                message={msg}
-                toolMessages={toolMessages}
-              />
+              <>
+                {hasTextContent ? (
+                  <>
+                    <AgentMessage
+                      key={`${msg.id}-text`}
+                      message={msg}
+                      isStreaming={isStreamingThisMessage}
+                    />
+                    <CustomComponentRender message={msg} thread={stream} />
+                  </>
+                ) : (
+                  <Thinking
+                    key={msg.id}
+                    title="Agent Thinking"
+                    message={msg}
+                    toolMessages={toolMessages}
+                  />
+                )}
+              </>
             );
           }
 
@@ -94,11 +113,14 @@ export default function ChatBodyComponent() {
           }
 
           return (
-            <AgentMessage
-              key={msg.id}
-              message={msg}
-              isStreaming={isStreamingThisMessage}
-            />
+            <>
+              <CustomComponentRender message={msg} thread={stream} />
+              <AgentMessage
+                key={msg.id}
+                message={msg}
+                isStreaming={isStreamingThisMessage}
+              />
+            </>
           );
         })
       )}
