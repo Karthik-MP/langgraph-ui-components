@@ -32,7 +32,7 @@ export function CustomComponentProvider({
     useState<Record<string, React.FunctionComponent | React.ComponentClass>>(
       initialComponents
     );
-    console.log("CustomComponentProvider - initialComponents:", initialComponents);
+    // console.log("CustomComponentProvider - initialComponents:", initialComponents);
   const registerComponent = useCallback(
     (
       name: string,
