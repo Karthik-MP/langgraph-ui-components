@@ -15,7 +15,7 @@ A React component library for building AI chat interfaces with LangChain/LangGra
 ## Installation
 
 ```bash
-npm install agentic-chat-components
+npm install agentic-chat-ui-components
 ```
 
 **Peer dependencies** (install these separately):
@@ -29,23 +29,18 @@ npm install react react-dom @langchain/core @langchain/langgraph @langchain/lang
 ```tsx
 import { 
   Sidebar,
-  ChatProvider, 
-  ChatRuntimeProvider,
-  ThreadProvider,
-  StreamProvider 
-} from '@karthik_maganahalli_prakash/chat-components';
-import '@karthik_maganahalli_prakash/chat-components/styles.css';
+  ChatProvider
+} from 'agentic-chat-ui-components';
+import 'agentic-chat-ui-components/styles.css';
 
 function App() {
   return (
-    <ChatProvider>
-      <ChatRuntimeProvider>
-        <ThreadProvider>
-          <StreamProvider>
-            <Sidebar />
-          </StreamProvider>
-        </ThreadProvider>
-      </ChatRuntimeProvider>
+    <ChatProvider
+      apiUrl="your-api-url"
+      assistantId="your-assistant-id"
+      identity={{ user_id: "user123", org_id: "org456" }}
+    >
+      <Sidebar />
     </ChatProvider>
   );
 }
@@ -71,6 +66,90 @@ function App() {
 - `useChatRuntime()` - Access runtime config
 - `useFileProvider()` - Access file state
 - `useCustomComponents()` - Register custom components
+
+## sendMessage Function
+
+The `sendMessage` function is available through the `useStreamContext()` hook and allows you to send messages programmatically to the AI agent.
+
+### Parameters
+
+- `message` (Message | string): The message content. Can be a string for simple text messages or a full Message object for more control.
+- `options` (optional object):
+  - `isAIMessage` (boolean, optional): If true, the message is intended for the agent only and won't be visible to the user. Defaults to false.
+  - `config` (any, optional): Additional configuration to pass to the agent.
+
+### Usage Example
+
+```tsx
+import { useStreamContext } from 'agentic-chat-ui-components';
+
+function MyComponent() {
+  const { sendMessage } = useStreamContext();
+
+  const handleSend = async () => {
+    await sendMessage("Hello, AI!", { isAIMessage: false });
+  };
+
+  return <button onClick={handleSend}>Send Message</button>;
+}
+```
+
+This will send a user-visible message "Hello, AI!" to the agent.
+
+For agent-only messages:
+
+```tsx
+await sendMessage("Internal event occurred", { isAIMessage: true });
+```
+
+## Custom Components
+
+You can inject custom React components into chat messages using the `CustomComponentProvider`. Components are registered by name and can be referenced in message content.
+
+### Registering Components via Props
+
+Pass initial components as the `initialComponents` prop to `CustomComponentProvider`:
+
+```tsx
+import { CustomComponentProvider } from 'agentic-chat-ui-components';
+
+const MyCustomButton = ({ text }) => <button>{text}</button>;
+
+function App() {
+  return (
+    <CustomComponentProvider
+      initialComponents={{
+        'my-button': MyCustomButton,
+      }}
+    >
+      {/* Your app */}
+    </CustomComponentProvider>
+  );
+}
+```
+
+### Registering Components Programmatically
+
+Use the `registerComponent` method from the `useCustomComponents` hook:
+
+```tsx
+import { useCustomComponents } from 'agentic-chat-ui-components';
+
+function RegisterComponent() {
+  const { registerComponent } = useCustomComponents();
+
+  useEffect(() => {
+    registerComponent('my-button', ({ text }) => <button>{text}</button>);
+  }, [registerComponent]);
+
+  return null;
+}
+```
+
+### Additional Methods
+
+- `registerComponents(components)`: Register multiple components at once.
+- `unregisterComponent(name)`: Remove a registered component.
 
 ## Types
 
