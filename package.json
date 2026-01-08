@@ -1,7 +1,7 @@
 {
   "name": "agentic-chat-ui-components",
   "private": false,
-  "version": "0.0.1",
+  "version": "0.0.2-testing.0",
   "type": "module",
   "main": "./dist/index.es.js",
   "module": "./dist/index.es.js",
