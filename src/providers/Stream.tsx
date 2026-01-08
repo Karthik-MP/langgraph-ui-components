@@ -37,6 +37,15 @@ const useTypedStream = useStream<
 
 type StreamContextType = ReturnType<typeof useTypedStream> & {
   submit: ReturnType<typeof useTypedStream>["submit"];
+  sendMessage: (
+    message: Message | string,
+    options?: {
+      /** If true, message is meant for agent only (not user-visible) */
+      isAIMessage?: boolean;
+      /** Additional config to pass to the agent */
+      config?: any;
+    }
+  ) => Promise<void>;
 };
 
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
@@ -119,6 +128,47 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     [streamValue, configuration]
   );
 
+  /**
+   * Send a message to the agent programmatically
+   * Useful for triggering agent actions without user-visible messages
+   * e.g., "login completed", "card clicked: {id}"
+   */
+  const sendMessage = useCallback(
+    async (
+      message: Message | string,
+      options?: {
+        isAIMessage?: boolean;
+        config?: any;
+      }
+    ) => {
+      const messageObj: Message =
+        typeof message === "string"
+          ? {
+              type: "human",
+              content: message,
+              // Mark as AI-directed message
+              additional_kwargs: {
+                isAIMessage: options?.isAIMessage ?? false,
+              },
+            }
+          : {
+              ...message,
+              additional_kwargs: {
+                ...message.additional_kwargs,
+                isAIMessage: options?.isAIMessage ?? false,
+              },
+            };
+
+      await submit(
+        { messages: [messageObj] },
+        {
+          config: options?.config,
+        }
+      );
+    },
+    [submit]
+  );
+
   useEffect(() => {
     checkGraphStatus(apiUrl, identity?.token).then((ok) => {
       if (!ok) {
@@ -134,8 +184,9 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     () => ({
       ...streamValue,
       submit,
+      sendMessage,
     }),
-    [streamValue, submit]
+    [streamValue, submit, sendMessage]
   );
 
   return (
