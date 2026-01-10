@@ -1,9 +1,10 @@
 import React from "react";
 import { ChatRuntimeProvider } from "./ChatRuntime";
-import { ThreadProvider } from "./Thread";
-import { StreamProvider } from "./Stream";
-import { FileProvider } from "./FileProvider";
 import { CustomComponentProvider } from "./CustomComponentProvider";
+import { FileProvider } from "./FileProvider";
+import { StreamProvider } from "./Stream";
+import { ThreadProvider } from "./Thread";
+import { SuggestionProvider } from "./useChatSuggestions";
 
 export interface ChatIdentity {
   user_id: string;
@@ -34,9 +35,11 @@ export function ChatProvider({
       >
         <ThreadProvider>
           <StreamProvider>
-            <CustomComponentProvider initialComponents={customComponents}>
-              <FileProvider>{children}</FileProvider>
-            </CustomComponentProvider>
+            <SuggestionProvider>
+              <CustomComponentProvider initialComponents={customComponents}>
+                <FileProvider>{children}</FileProvider>
+              </CustomComponentProvider>
+            </SuggestionProvider>
           </StreamProvider>
         </ThreadProvider>
       </ChatRuntimeProvider>
