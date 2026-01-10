@@ -9,6 +9,7 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { X } from "lucide-react";
 import type { FileInfo } from "@/types/types";
 import { useFileProvider } from "@/providers/FileProvider";
+import Suggestion from "@/components/Suggestion";
 
 export default function Sidebar({
   header = "AI Assistant",
@@ -145,8 +146,8 @@ export default function Sidebar({
                     <ChatBody />
                   </div>
                 </div>
-
-                <div className="sticky bottom-0 border-t border-zinc-800">
+                <Suggestion />
+                <div className="sticky bottom-0 border-t border-zinc-800 m-2">
                   <ChatInput
                     input={input}
                     setInput={setInput}

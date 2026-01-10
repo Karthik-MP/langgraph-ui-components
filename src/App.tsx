@@ -8,6 +8,7 @@ import {
 import { ThreadProvider } from "./providers/Thread";
 import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
+import { CustomComponentProvider } from "./providers/CustomComponentProvider";
 
 function App() {
   const [identity] = useState<ChatIdentity>({
@@ -23,9 +24,11 @@ function App() {
       >
         <ThreadProvider>
           <StreamProvider>
-            <FileProvider>
-              <Sidebar />
-            </FileProvider>
+            <CustomComponentProvider>
+              <FileProvider>
+                <Sidebar />
+              </FileProvider>
+            </CustomComponentProvider>
           </StreamProvider>
         </ThreadProvider>
       </ChatRuntimeProvider>

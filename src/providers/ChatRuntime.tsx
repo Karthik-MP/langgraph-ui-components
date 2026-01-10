@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 export type ChatIdentity = {
   authToken?: string | null; // Bearer token
@@ -30,11 +30,11 @@ export function ChatRuntimeProvider({
   identity,
   children,
 }: ChatRuntimeProviderProps) {
-  const value: ChatRuntimeContextValue = {
+  const value: ChatRuntimeContextValue = useMemo(() => ({
     apiUrl,
     assistantId,
     identity,
-  };
+  }), [apiUrl, assistantId, identity]);
 
   return (
     <ChatRuntimeContext.Provider value={value}>

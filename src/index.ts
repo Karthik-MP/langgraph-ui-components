@@ -15,8 +15,10 @@ export { useStreamContext } from "./providers/Stream";
 export { useChatRuntime } from "./providers/ChatRuntime";
 export { useFileProvider } from "./providers/FileProvider";
 export { useCustomComponents } from "./providers/CustomComponentProvider";
+export { useChatSuggestions } from "./providers/useChatSuggestions";
 
 // Types
 export type { ChatIdentity } from "./providers/ChatProvider";
 export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { FileInfo, Metadata } from "./types/types";
+export type { SuggestionsOptions } from "./providers/useChatSuggestions";
