@@ -1,4 +1,4 @@
-import type { FileInfo } from "@/types/types";
+import type { FileInfo } from "@/types/fileInput";
 import { FileIcon, Paperclip, StepForward, X } from "lucide-react";
 import {
   type ChangeEvent,
@@ -9,6 +9,7 @@ import {
 
 export default function ChatInput({
   input,
+  inputFileAccept,
   setInput,
   handleSubmit,
   fileInput,
@@ -19,6 +20,7 @@ export default function ChatInput({
 }: {
   input: string;
   setInput: (value: string) => void;
+  inputFileAccept?: string;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
   fileInput: FileInfo[];
   setFileInput: Dispatch<SetStateAction<FileInfo[]>>;
@@ -111,7 +113,7 @@ export default function ChatInput({
             type="file"
             multiple
             disabled={isLoading}
-            accept=".step,.stp,.sldprt,.stl,.dxf,.ipt,.x_t,.x_b,.3dxml,.catpart,.catproduct,.catdrawing,.catprocess,.catperspective"
+            accept={inputFileAccept}
             className="hidden"
             onChange={handleFileSelect}
           />

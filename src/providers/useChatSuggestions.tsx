@@ -1,9 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, useMemo, useRef } from "react";
 import { useStreamContext } from "./Stream";
 
+/**
+ * Options for configuring chat suggestions.
+ */
 export type SuggestionsOptions = {
+    /** Custom instructions for generating suggestions */
     instructions?: string;
+    /** Minimum number of suggestions to display */
     minSuggestions?: number;
+    /** Maximum number of suggestions to display */
     maxSuggestions?: number;
 };
 
@@ -29,8 +35,11 @@ const SuggestionContext = createContext<SuggestionContextValue | undefined>(unde
 export function SuggestionProvider({ children }: { children: React.ReactNode }) {
     const [config, setConfig] = useState<SuggestionConfig | null>(null);
 
+    // Memoize the context value to prevent infinite re-renders
+    const contextValue = useMemo(() => ({ config, setConfig }), [config]);
+
     return (
-        <SuggestionContext.Provider value={{ config, setConfig }}>
+        <SuggestionContext.Provider value={contextValue}>
             {children}
         </SuggestionContext.Provider>
     );
@@ -40,21 +49,40 @@ export function SuggestionProvider({ children }: { children: React.ReactNode }) 
 export function useSuggestionConfig() {
     const context = useContext(SuggestionContext);
     if (!context) {
-        return { config: null, setConfig: () => {} };
+        throw new Error("useSuggestionConfig must be used within a SuggestionProvider");
     }
     return context;
 }
 
-// Public hook - only registers configuration, doesn't return anything
+/**
+ * Register configuration for chat suggestions.
+ * Call this hook in your component to enable contextual suggestions in the chat.
+ * 
+ * @param opts - Configuration options for suggestions
+ * @param deps - Dependency array that triggers suggestion regeneration when changed
+ * 
+ * @example
+ * ```tsx
+ * useChatSuggestions({
+ *   instructions: "Suggest next steps for the user",
+ *   minSuggestions: 2,
+ *   maxSuggestions: 4
+ * }, [conversationContext]);
+ * ```
+ */
 export function useChatSuggestions(
     opts: SuggestionsOptions = {},
     deps: any[] = []
 ): void {
-    const context = useSuggestionConfig();
+    const { setConfig } = useSuggestionConfig();
+
+    // Create stable serialized keys to avoid infinite loops
+    const optsKey = useMemo(() => JSON.stringify(opts), [opts.instructions, opts.minSuggestions, opts.maxSuggestions]);
+    const depsKey = useMemo(() => JSON.stringify(deps), [deps.length, ...deps]);
 
     useEffect(() => {
         // Register the configuration
-        context.setConfig({
+        setConfig({
             options: opts,
             deps,
             isEnabled: true,
@@ -62,10 +90,10 @@ export function useChatSuggestions(
 
         // Cleanup on unmount
         return () => {
-            context.setConfig(null);
+            setConfig(null);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(opts), JSON.stringify(deps)]);
+    }, [optsKey, depsKey]);
 }
 
 // Internal hook for generating suggestions (used by Suggestion component)
@@ -77,7 +105,7 @@ export function useGeneratedSuggestions(
     const { config } = useSuggestionConfig();
 
     const [suggestions, setSuggestions] = useState<string[]>([]);
-    const [loading, setLoading] = useState(false);
+    // const [loading, setLoading] = useState(false);
 
     // Merge user config with component defaults
     const instructions = config?.options?.instructions ?? opts.instructions ?? "Suggest relevant next actions.";
@@ -86,25 +114,44 @@ export function useGeneratedSuggestions(
     const deps = config?.deps ?? [];
     const isEnabled = config?.isEnabled ?? false;
 
-    // Create a stable key for deps
-    const depsKey = JSON.stringify(deps);
+    // Create a stable key for deps using useMemo to avoid expensive recalculation
+    // For primitives: serialize directly; for objects/functions: use stable ref IDs
+    const depCounterRef = useRef(0);
+    const depMapRef = useRef(new WeakMap<object, number>());
+
+    const depsKey = useMemo(() => {
+        return deps.map(d => {
+            if (d === null) return 'null';
+            if (d === undefined) return 'undefined';
+            const type = typeof d;
+            if (type === 'object' || type === 'function') {
+                // Assign stable ID to objects/functions to avoid stringifying them
+                if (!depMapRef.current.has(d as object)) {
+                    depMapRef.current.set(d as object, depCounterRef.current++);
+                }
+                return `ref:${depMapRef.current.get(d as object)}`;
+            }
+            // For primitives, use direct value
+            return `${type}:${String(d)}`;
+        }).join('|');
+    }, [deps]);
 
     useEffect(() => {
         // Only generate suggestions if the hook was called by the user
         if (!isEnabled) {
             setSuggestions([]);
-            setLoading(false);
+            // setLoading(false);
             return;
         }
 
         let mounted = true;
-        setLoading(true);
+        // setLoading(true);
         setSuggestions([]);
 
         // If external suggestions provided, use them directly
         if (externalSuggestions && externalSuggestions.length > 0) {
             setSuggestions(externalSuggestions);
-            setLoading(false);
+            // setLoading(false);
             return;
         }
 
@@ -139,7 +186,7 @@ export function useGeneratedSuggestions(
             if (!mounted) return;
             const final = instructions ? selected.map(s => `${s}`) : selected;
             setSuggestions(final);
-            setLoading(false);
+            // setLoading(false);
         }, 150);
 
         return () => {
@@ -150,10 +197,10 @@ export function useGeneratedSuggestions(
 
     const onSelect = useCallback((suggestion: string) => {
         // Send the selected suggestion as a user message
-        sendMessage(suggestion, { isAIMessage: false });
+        sendMessage(suggestion, { type: "human" });
     }, [sendMessage]);
 
-    return { suggestions, loading, onSelect } as const;
+    return { suggestions, onSelect } as const;
 }
 
 export default useChatSuggestions;

@@ -1,5 +1,5 @@
 import { useStreamContext } from "@/providers/Stream";
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
 import AgentMessage from "./messages/AgentMessage";
 import HumanMessage from "./messages/HumanMessage";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
@@ -16,6 +16,89 @@ export default function ChatBodyComponent() {
 
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const prevMessageCountRef = useRef(0);
+
+  // Memoize message rendering logic to prevent unnecessary re-renders
+  const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
+    if (!msg.content.length) return null;
+    
+    // Skip tool messages that follow an AI message with tool calls
+    if (
+      isToolMessage(msg) &&
+      index > 0 &&
+      isAiWithToolCalls(messagesArray[index - 1])
+    ) {
+      return null;
+    }
+
+    const isLastMessage = index === messagesArray.length - 1;
+    const isStreamingThisMessage =
+      isLoading && isLastMessage && msg.type === "ai";
+
+    if (msg.type === "human") {
+      return <HumanMessage key={msg.id} message={msg} />;
+    }
+
+    // Group AI message with tool calls and subsequent tool messages
+    if (isAiWithToolCalls(msg)) {
+      const toolMessages = [];
+      let nextIndex = index + 1;
+      while (
+        nextIndex < messagesArray.length &&
+        isToolMessage(messagesArray[nextIndex])
+      ) {
+        toolMessages.push(messagesArray[nextIndex]);
+        nextIndex++;
+      }
+
+      // Check if there's text content to display
+      const hasTextContent =
+        Array.isArray(msg.content) &&
+        msg.content.some((c: any) => c.type === "text" && c.text?.trim());
+
+      if (hasTextContent) {
+        return (
+          <Fragment key={msg.id}>
+            <AgentMessage
+              message={msg}
+              isStreaming={isStreamingThisMessage}
+            />
+            <CustomComponentRender message={msg} thread={stream} />
+          </Fragment>
+        );
+      } else {
+        return (
+          <Thinking
+            key={msg.id}
+            title="Agent Thinking"
+            message={msg}
+            toolMessages={toolMessages}
+          />
+        );
+      }
+    }
+
+    // Standalone tool messages (shouldn't happen in normal flow)
+    if (isToolMessage(msg)) {
+      return (
+        <Thinking key={msg.id} title="Agent Thinking" message={msg} />
+      );
+    }
+
+    return (
+      <Fragment key={msg.id}>
+        <CustomComponentRender message={msg} thread={stream} />
+        <AgentMessage
+          message={msg}
+          isStreaming={isStreamingThisMessage}
+        />
+      </Fragment>
+    );
+  }, [isLoading, stream]);
+
+  // Memoize the rendered messages array
+  const renderedMessages = useMemo(() => {
+    return memoMessages.map((msg, index) => renderMessage(msg, index, memoMessages));
+  }, [memoMessages, renderMessage]);
 
   // Auto-scroll only when new messages are added or content updates
   useEffect(() => {
@@ -45,82 +128,7 @@ export default function ChatBodyComponent() {
           Start a conversation...
         </div>
       ) : (
-        memoMessages.map((msg, index) => {
-          if (!msg.content.length) return null;
-          // Skip tool messages that follow an AI message with tool calls
-          // They'll be rendered together with the AI message
-          if (
-            isToolMessage(msg) &&
-            index > 0 &&
-            isAiWithToolCalls(memoMessages[index - 1])
-          ) {
-            return null;
-          }
-
-          const isLastMessage = index === memoMessages.length - 1;
-          const isStreamingThisMessage =
-            isLoading && isLastMessage && msg.type === "ai";
-
-          if (msg.type === "human") {
-            return <HumanMessage key={msg.id} message={msg} />;
-          }
-
-          // Group AI message with tool calls and subsequent tool messages
-          if (isAiWithToolCalls(msg)) {
-            const toolMessages = [];
-            let nextIndex = index + 1;
-            while (
-              nextIndex < memoMessages.length &&
-              isToolMessage(memoMessages[nextIndex])
-            ) {
-              toolMessages.push(memoMessages[nextIndex]);
-              nextIndex++;
-            }
-
-            // Check if there's text content to display
-            const hasTextContent =
-              Array.isArray(msg.content) &&
-              msg.content.some((c: any) => c.type === "text" && c.text?.trim());
-
-            if (hasTextContent) {
-              return (
-                <Fragment key={msg.id}>
-                  <AgentMessage
-                    message={msg}
-                    isStreaming={isStreamingThisMessage}
-                  />
-                  <CustomComponentRender message={msg} thread={stream} />
-                </Fragment>
-              );
-            } else {
-              return (
-                <Thinking
-                  key={msg.id}
-                  title="Agent Thinking"
-                  message={msg}
-                  toolMessages={toolMessages}
-                />
-              );
-            }
-          }
-
-          // Standalone tool messages (shouldn't happen in normal flow)
-          if (isToolMessage(msg)) {
-            return (
-              <Thinking key={msg.id} title="Agent Thinking" message={msg} />
-            );
-          }
-
-          return (
-            <Fragment key={msg.id}>
-              <CustomComponentRender message={msg} thread={stream} />
-              <AgentMessage
-                message={msg}
-                isStreaming={isStreamingThisMessage}
-              />
-            </Fragment>
-          );
-        })
+        renderedMessages
       )}
     </div>
   );

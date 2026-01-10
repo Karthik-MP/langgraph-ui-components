@@ -7,19 +7,36 @@ import ChatBody from "../../components/ChatBody";
 import { useStreamContext } from "@/providers/Stream";
 import type { Message } from "@langchain/langgraph-sdk";
 import { X } from "lucide-react";
-import type { FileInfo } from "@/types/types";
+import type { FileInfo } from "@/types/fileInput";
+import type { ChatSidebarProps } from "@/types/ChatProps";
 import { useFileProvider } from "@/providers/FileProvider";
 import Suggestion from "@/components/Suggestion";
 
+/**
+ * Main sidebar chat interface component.
+ * Displays a chat button that opens a sliding sidebar with full chat functionality.
+ * 
+ * @param header - Custom header text for the chat sidebar (default: "AI Assistant")
+ * @param handleFileSelect - Optional custom file selection handler
+ * @param callThisOnSubmit - Optional callback invoked before message submission, can return updated file list
+ * 
+ * @example
+ * ```tsx
+ * <Sidebar 
+ *   header="My Custom AI"
+ *   callThisOnSubmit={async () => {
+ *     // Upload files to your backend
+ *     return updatedFiles;
+ *   }}
+ * />
+ * ```
+ */
 export default function Sidebar({
   header = "AI Assistant",
-  handleFileSelect,
-  callThisOnSubmit,
-}: {
-  header?: string;
-  handleFileSelect?: (e: FormEvent) => void;
-  callThisOnSubmit?: () => Promise<FileInfo[] | void>;
-}) {
+  chatProps,
+}: ChatSidebarProps) {
+
+  const { handleFileSelect, callThisOnSubmit } = chatProps ?? {};
 
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -150,6 +167,7 @@ export default function Sidebar({
                 <div className="sticky bottom-0 border-t border-zinc-800 m-2">
                   <ChatInput
                     input={input}
+                    inputFileAccept={chatProps?.inputFileAccept}
                     setInput={setInput}
                     handleSubmit={defaultHandleSubmit}
                     isLoading={isLoading}

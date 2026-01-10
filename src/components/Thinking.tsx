@@ -2,21 +2,16 @@ import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
 import React, { useState } from "react";
 
-function Thinking({ title, message, toolMessages }: { 
-  title?: string; 
+function Thinking({ title, message, toolMessages }: {
+  title?: string;
   message: Message;
   toolMessages?: Message[];
 }) {
   const [open, setOpen] = useState(true);
   const content = message.content
-  ? getContentString(message.content)
-  : "";
-  // const contentRef = React.useRef("");
-  
-  // React.useEffect(() => {
-  //   contentRef.current = message.content ? getContentString(message.content) : "";
-  // }, [message.content]);
-  
+    ? getContentString(message.content)
+    : "";
+
   if (!message?.id) return null;
 
   return (
@@ -36,9 +31,8 @@ function Thinking({ title, message, toolMessages }: {
           <span>🔷 {title}</span>
           <svg
             data-accordion-icon
-            className={`w-5 h-5 shrink-0 transition-transform ${
-              open ? "rotate-0" : "rotate-180"
-            }`}
+            className={`w-5 h-5 shrink-0 transition-transform ${open ? "rotate-0" : "rotate-180"
+              }`}
             aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -75,6 +69,6 @@ function Thinking({ title, message, toolMessages }: {
 }
 
 export default React.memo(Thinking, (prevProps, nextProps) => {
-  return prevProps.message?.id === nextProps.message?.id && 
-         prevProps.toolMessages?.length === nextProps.toolMessages?.length;
+  return prevProps.message?.id === nextProps.message?.id &&
+    prevProps.toolMessages?.length === nextProps.toolMessages?.length;
 });

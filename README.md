@@ -151,7 +151,7 @@ The `sendMessage` function is available through the `useStreamContext()` hook an
 
 - `message` (Message | string): The message content. Can be a string for simple text messages or a full Message object for more control.
 - `options` (optional object):
-  - `isAIMessage` (boolean, optional): If true, the message is intended for the agent only and won't be visible to the user. Defaults to false.
+  - `type` (Message["type"], optional): The message type to use when sending a string message. Defaults to "human" for user messages. Use "system" for agent-only messages.
   - `config` (any, optional): Additional configuration to pass to the agent.
 
 ### Usage Example
@@ -175,7 +175,7 @@ This will send a user-visible message "Hello, AI!" to the agent.
 For agent-only messages:
 
 ```tsx
-await sendMessage("Internal event occurred", { isAIMessage: true });
+await sendMessage("Internal event occurred", { type: "system" });
 ```
 
 ## Custom Components
@@ -233,7 +233,6 @@ Full TypeScript definitions available for:
 - `ChatIdentity`
 - `ChatRuntimeContextValue`
 - `FileInfo`
-- `Metadata`
 - `SuggestionsOptions`
 
 ## Development Notes
