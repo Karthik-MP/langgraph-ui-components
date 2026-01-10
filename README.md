@@ -66,6 +66,82 @@ function App() {
 - `useChatRuntime()` - Access runtime config
 - `useFileProvider()` - Access file state
 - `useCustomComponents()` - Register custom components
+- `useChatSuggestions()` - Display contextual chat suggestions
+
+## useChatSuggestions Hook
+
+The `useChatSuggestions` hook enables intelligent, opt-in chat suggestions for your application. It acts as a configuration hook that **doesn't return anything** but internally registers suggestion settings. The built-in `Suggestion` component (included in `Sidebar`) automatically picks up this configuration and displays suggestions only when the hook is used.
+
+### Key Features
+
+- **Opt-in by default** - Suggestions only appear when you call this hook
+- **No return value** - Simply call it to enable suggestions
+- **Context-aware** - Pass dependencies for dynamic, contextual suggestions
+- **Agent integration** - Automatically uses agent-provided suggestions when available
+
+### Basic Usage
+
+```tsx
+import { useChatSuggestions } from 'agentic-chat-ui-components';
+
+function MyComponent() {
+  // Simply call the hook - it registers configuration internally
+  useChatSuggestions({
+    instructions: "Suggest helpful next actions",
+    minSuggestions: 1,
+    maxSuggestions: 2,
+  });
+
+  return <div>Your component content</div>;
+}
+```
+
+### Without the Hook
+
+If you **don't call** `useChatSuggestions` anywhere in your component tree, **no suggestions will be generated or displayed**. This makes the feature completely opt-in.
+
+### Options
+
+- `instructions` (string, optional): Guidance text for suggestion generation. Default: `"Suggest relevant next actions."`
+- `minSuggestions` (number, optional): Minimum number of suggestions to display. Default: `2`
+- `maxSuggestions` (number, optional): Maximum number of suggestions to display. Default: `4`
+
+**Note:** The hook returns `void` - it doesn't provide any return values. The internal `Suggestion` component handles display and interaction.
+
+### Agent Integration
+
+When your agent returns suggestions in the response (via the `suggestions` field in state), they're automatically used instead of generating defaults:
+
+```json
+{
+  "messages": [...],
+  "suggestions": ["Show part details", "Update configuration", "Get pricing"]
+}
+```
+
+The system seamlessly switches between agent-provided suggestions and fallback suggestions based on availability.
+
+### Context-Aware Suggestions
+
+Pass dependencies as the second argument to generate context-aware suggestions:
+
+```tsx
+function ChatInterface() {
+  const [lastMessage, setLastMessage] = useState('');
+
+  useChatSuggestions(
+    {
+      instructions: "Suggest based on conversation context",
+      maxSuggestions: 3,
+    },
+    [lastMessage] // Dependencies trigger context-aware generation
+  );
+
+  return <div>...</div>;
+}
+```
+
+When dependencies change, suggestions are regenerated to match the new context.
 
 ## sendMessage Function
 
@@ -158,6 +234,7 @@ Full TypeScript definitions available for:
 - `ChatRuntimeContextValue`
 - `FileInfo`
 - `Metadata`
+- `SuggestionsOptions`
 
 ## Development Notes
 

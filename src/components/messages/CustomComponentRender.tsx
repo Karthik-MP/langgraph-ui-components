@@ -22,15 +22,17 @@ function CustomComponentRender({
   
   return (
     <Fragment key={message.id}>
-      {customComponents.map((customComponent) => (
-        <LoadExternalComponent
-          key={customComponent.id}
-          stream={thread}
-          message={customComponent}
-          components={components}
-          meta={{ ui: customComponent }}
-        />
-      ))}
+      {customComponents
+        ?.filter((c) => !!components?.[c.name as keyof typeof components])
+        .map((customComponent) => (
+          <LoadExternalComponent
+            key={customComponent.id}
+            stream={thread}
+            message={customComponent}
+            components={components}
+            meta={{ ui: customComponent }}
+          />
+        ))}
     </Fragment>
   );
 }
