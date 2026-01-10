@@ -1,6 +1,5 @@
-import React from "react";
-import { useGeneratedSuggestions } from "@/providers/useChatSuggestions";
 import { useStreamContext } from "@/providers/Stream";
+import { useGeneratedSuggestions } from "@/providers/useChatSuggestions";
 
 export default function Suggestion() {
     const stream = useStreamContext();
@@ -29,12 +28,12 @@ export default function Suggestion() {
 
                     const handleClick = () => onSelect?.(suggestion);
 
-                    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-                        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
-                            e.preventDefault();
-                            onSelect?.(suggestion);
-                        }
-                    };
+                    // const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+                    //     if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+                    //         e.preventDefault();
+                    //         onSelect?.(suggestion);
+                    //     }
+                    // };
 
                     return (
                         <div
@@ -43,7 +42,7 @@ export default function Suggestion() {
                             aria-pressed={false}
                             key={index}
                             onClick={handleClick}
-                            onKeyDown={handleKeyDown}
+                            // onKeyDown={handleKeyDown}
                             className={`border rounded-xl px-3 py-2 border-zinc-500 text-center break-words ${sizeClass} cursor-pointer hover:bg-zinc-700/5 hover:scale-[1.01] transition transform focus:outline-none focus:ring-2 focus:ring-zinc-500`}
                         >
                             {suggestion}

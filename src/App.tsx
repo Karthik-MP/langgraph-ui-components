@@ -9,6 +9,7 @@ import { ThreadProvider } from "./providers/Thread";
 import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
 import { CustomComponentProvider } from "./providers/CustomComponentProvider";
+import { SuggestionProvider } from "./providers/useChatSuggestions";
 
 function App() {
   const [identity] = useState<ChatIdentity>({
@@ -25,9 +26,11 @@ function App() {
         <ThreadProvider>
           <StreamProvider>
             <CustomComponentProvider>
-              <FileProvider>
-                <Sidebar />
-              </FileProvider>
+              <SuggestionProvider>
+                <FileProvider>
+                  <Sidebar />
+                </FileProvider>
+              </SuggestionProvider>
             </CustomComponentProvider>
           </StreamProvider>
         </ThreadProvider>

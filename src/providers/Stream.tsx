@@ -1,6 +1,8 @@
+/* @refresh reset */
 import { useChatRuntime } from "@/providers/ChatRuntime";
 import { type Message } from "@langchain/langgraph-sdk";
 import { useStream } from "@langchain/langgraph-sdk/react";
+import { v4 as uuidv4 } from "uuid";
 import {
   isRemoveUIMessage,
   isUIMessage,
@@ -42,7 +44,7 @@ type StreamContextType = ReturnType<typeof useTypedStream> & {
     message: Message | string,
     options?: {
       /** If true, message is meant for agent only (not user-visible) */
-      isAIMessage?: boolean;
+      type?: Message["type"];
       /** Additional config to pass to the agent */
       config?: any;
     }
@@ -51,18 +53,18 @@ type StreamContextType = ReturnType<typeof useTypedStream> & {
 
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
 
-async function checkGraphStatus(apiUrl: string, token: string | null) {
+async function checkGraphStatus(apiUrl: string, authToken: string | null | undefined) {
   try {
     const res = await fetch(`${apiUrl}/info`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
     });
     return res.ok;
   } catch {
-    return false;
+    console.error("Failed to intialize LangGraph Agent");
   }
 }
 
-const StreamSession = ({ children }: { children: ReactNode }) => {
+const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string; children: ReactNode }) => {
   const { apiUrl, assistantId, identity } = useChatRuntime();
   const { threadId, setThreadId, configuration } = useThread();
 
@@ -70,8 +72,8 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     apiUrl,
     assistantId,
     threadId, // null initially → LangGraph creates it
-    defaultHeaders: identity?.token
-      ? { Authorization: `Bearer ${identity?.token}` }
+    defaultHeaders: identity?.authToken
+      ? { Authorization: `Bearer ${identity?.authToken}` }
       : undefined,
     fetchStateHistory: true,
     onCustomEvent: (event, options) => {
@@ -89,20 +91,6 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         setThreadId(id); // store once
       }
     },
-
-    // onUpdateEvent: (data, options) => {
-    //   if (data.messages) {
-    //     options.mutate((prev) => {
-    //       const incoming = Array.isArray(data.messages)
-    //         ? (data.messages as Message[])
-    //         : ([...prev.messages, data.messages as Message] as Message[]);
-    //       return ({
-    //         ...prev,
-    //         messages: incoming,
-    //       }) as Partial<StateType>;
-    //     });
-    //   }
-    // },
   });
 
   /**
@@ -110,23 +98,32 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
    * user_id + org_id ALWAYS passed
    */
   const submit = useCallback(
-    (
+    async (
       input: Parameters<typeof streamValue.submit>[0],
       options?: Parameters<typeof streamValue.submit>[1]
     ) => {
-      return streamValue.submit(input, {
-        ...options,
-        config: {
-          ...(options?.config ?? {}),
-          configurable: {
-            ...identity,
-            ...configuration,
-            ...(options?.config?.configurable ?? {}),
+      try {
+        return await streamValue.submit(input, {
+          ...options,
+          config: {
+            ...(options?.config ?? {}),
+            configurable: {
+              ...identity,
+              ...configuration,
+              ...(options?.config?.configurable ?? {}),
+            },
           },
-        },
-      });
+        });
+      } catch (error) {
+        console.error("Agent API failed:", error);
+
+        // Add fallback message as an AI response
+        const errorMessage = fallbackMessage || "Agent is down. Will get back to you soon! Try again later.";
+
+        sendMessage(errorMessage, { type: "system" });
+      }
     },
-    [streamValue, identity, configuration]
+    [streamValue, identity, configuration, fallbackMessage]
   );
 
   /**
@@ -138,27 +135,20 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     async (
       message: Message | string,
       options?: {
-        isAIMessage?: boolean;
+        type?: Message["type"];
         config?: any;
       }
     ) => {
       const messageObj: Message =
         typeof message === "string"
-          ? {
-              type: "system",
-              content: message,
-              // Mark as AI-directed message
-              additional_kwargs: {
-                isAIMessage: options?.isAIMessage ?? false,
-              },
-            }
+          ? ({
+            id: uuidv4(),
+            type: options?.type ?? "human",
+            content: message,
+          } as Message)
           : {
-              ...message,
-              additional_kwargs: {
-                ...message.additional_kwargs,
-                isAIMessage: options?.isAIMessage ?? false,
-              },
-            };
+            ...message,
+          };
 
       await submit(
         { messages: [messageObj] },
@@ -171,7 +161,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    checkGraphStatus(apiUrl, identity?.token).then((ok) => {
+    checkGraphStatus(apiUrl, identity?.authToken).then((ok) => {
       if (!ok) {
         toast.error("Failed to connect to LangGraph server", {
           description: `Unable to reach ${apiUrl}`,
@@ -179,7 +169,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         });
       }
     });
-  }, [apiUrl, identity?.token]);
+  }, [apiUrl, identity?.authToken]);
 
   const value = useMemo(
     () => ({
@@ -195,10 +185,34 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export function StreamProvider({ children }: { children: ReactNode }) {
-  return <StreamSession>{children}</StreamSession>;
+/**
+ * Provides streaming message functionality for real-time AI responses.
+ * Manages message state, handles streaming updates, and provides submit/sendMessage functions.
+ * 
+ * @param fallbackMessage - Optional custom message to display when agent API fails (default: "Agent is down. Will get back to you soon! Try again later.")
+ * 
+ * @example
+ * ```tsx
+ * <StreamProvider fallbackMessage="Our AI is currently offline. Please try again soon.">
+ *   <ChatInterface />
+ * </StreamProvider>
+ * ```
+ */
+export function StreamProvider({ fallbackMessage, children }: { fallbackMessage?: string; children: ReactNode }) {
+  return <StreamSession fallbackMessage={fallbackMessage}>{children}</StreamSession>;
 }
 
+/**
+ * Hook to access the streaming context.
+ * Provides access to messages, loading state, and functions to submit messages.
+ * 
+ * @throws {Error} If used outside of StreamProvider
+ * 
+ * @example
+ * ```tsx
+ * const { messages, isLoading, submit, sendMessage } = useStreamContext();
+ * ```
+ */
 export function useStreamContext(): StreamContextType {
   const ctx = useContext(StreamContext);
   if (!ctx) {
