@@ -1,0 +1,2 @@
+- Separate types and export
+- Trigger the Sidebar for on keyboard accessibility/shortcuts

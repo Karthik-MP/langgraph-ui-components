@@ -20,5 +20,5 @@ export { useChatSuggestions } from "./providers/useChatSuggestions";
 // Types
 export type { ChatIdentity } from "./providers/ChatProvider";
 export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
-export type { FileInfo, Metadata } from "./types/types";
+export type { FileInfo } from "./types/fileInput";
 export type { SuggestionsOptions } from "./providers/useChatSuggestions";
