@@ -22,6 +22,7 @@ import { useThread } from "./Thread";
 export type StateType = {
   messages: Message[];
   ui?: UIMessage[];
+  suggestions?: string[];
 };
 
 const useTypedStream = useStream<
@@ -125,7 +126,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         },
       });
     },
-    [streamValue, configuration]
+    [streamValue, identity, configuration]
   );
 
   /**
@@ -144,7 +145,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       const messageObj: Message =
         typeof message === "string"
           ? {
-              type: "human",
+              type: "system",
               content: message,
               // Mark as AI-directed message
               additional_kwargs: {
