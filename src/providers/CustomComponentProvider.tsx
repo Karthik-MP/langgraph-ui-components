@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 interface CustomComponentContextValue {
   components: Record<string, React.FunctionComponent | React.ComponentClass>;
@@ -32,7 +32,7 @@ export function CustomComponentProvider({
     useState<Record<string, React.FunctionComponent | React.ComponentClass>>(
       initialComponents
     );
-    // console.log("CustomComponentProvider - initialComponents:", initialComponents);
+
   const registerComponent = useCallback(
     (
       name: string,
@@ -82,6 +82,18 @@ export function CustomComponentProvider({
   );
 }
 
+/**
+ * Hook to access and manage custom component registry.
+ * Use this to register, unregister, or access custom components.
+ * 
+ * @throws {Error} If used outside of CustomComponentProvider
+ * 
+ * @example
+ * ```tsx
+ * const { components, registerComponent } = useCustomComponents();
+ * registerComponent('MyComponent', MyComponent);
+ * ```
+ */
 export function useCustomComponents() {
   const context = useContext(CustomComponentContext);
   if (!context) {
