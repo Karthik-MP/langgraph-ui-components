@@ -51,7 +51,7 @@ export default function Sidebar({
     if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
       return;
 
-    console.log("Submitting with input:", input);
+    // console.log("Submitting with input:", input);
 
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
@@ -60,7 +60,7 @@ export default function Sidebar({
       if (result && result.length > 0) latestFiles = result;
     }
 
-    console.log("Using files for submission:", latestFiles);
+    // console.log("Using files for submission:", latestFiles);
 
     const contentBlocks = [
       ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
