@@ -20,7 +20,7 @@ export default function ChatBodyComponent() {
   // Memoize message rendering logic to prevent unnecessary re-renders
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
     if (!msg.content.length) return null;
-    
+
     // Skip tool messages that follow an AI message with tool calls
     if (
       isToolMessage(msg) &&
@@ -128,7 +128,16 @@ export default function ChatBodyComponent() {
           Start a conversation...
         </div>
       ) : (
-        renderedMessages
+        <>
+          {renderedMessages}
+          {/* Show thinking indicator when loading but no AI response yet */}
+          {isLoading && memoMessages.length > 0 && memoMessages[memoMessages.length - 1].type === "human" && (
+            <div className="flex items-center gap-2">
+              {/* <div className="animate rounded-full h-6 w-6 border-b-2 border-zinc-400"></div> */}
+               Thinking<span className="animate-pulse">...</span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

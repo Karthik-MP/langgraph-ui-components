@@ -25,6 +25,11 @@ export default defineConfig({
         ...Object.keys(pkg.dependencies || {}),
         "react/jsx-runtime",
       ],
+      output:{
+        preserveModules: true,
+        preserveModulesRoot: "src",
+        exports: "named",
+      }
     },
   },
   resolve: {
