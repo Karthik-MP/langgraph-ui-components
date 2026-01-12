@@ -11,6 +11,8 @@ import type { FileInfo } from "@/types/fileInput";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import { useFileProvider } from "@/providers/FileProvider";
 import Suggestion from "@/components/Suggestion";
+import { useChatRuntime } from "@/providers/ChatRuntime";
+import { useThread } from "@/providers/Thread";
 
 /**
  * Main sidebar chat interface component.
@@ -44,6 +46,8 @@ export default function Sidebar({
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
+  const { identity } = useChatRuntime();
+  const { configuration } = useThread();
 
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,6 +91,12 @@ export default function Sidebar({
           ...prev,
           messages: [...(prev.messages ?? []), newHumanMessage],
         }),
+        config: {
+          configurable: {
+            ...identity,
+            ...configuration,
+          },
+        },
       }
     );
 
