@@ -9,7 +9,7 @@ import {
 
 export default function ChatInput({
   input,
-  inputFileAccept,
+  inputFileAccept = ".png,.jpg,.jpeg,.pdf,.docx",
   setInput,
   handleSubmit,
   fileInput,
@@ -20,11 +20,11 @@ export default function ChatInput({
 }: {
   input: string;
   setInput: (value: string) => void;
-  inputFileAccept?: string;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
   fileInput: FileInfo[];
   setFileInput: Dispatch<SetStateAction<FileInfo[]>>;
   handleFileSelect: (event: ChangeEvent<HTMLInputElement>) => void;
+  inputFileAccept?: string;
   isLoading?: boolean;
   onCancel?: () => void;
 }) {
