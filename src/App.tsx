@@ -10,6 +10,7 @@ import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
 import { CustomComponentProvider } from "./providers/CustomComponentProvider";
 import { SuggestionProvider } from "./providers/useChatSuggestions";
+import Chat from "./pages/Chat/Chat";
 
 function App() {
   const [identity] = useState<ChatIdentity>({
@@ -19,8 +20,8 @@ function App() {
   return (
     <React.Suspense fallback={<div>Loading (layout)...</div>}>
       <ChatRuntimeProvider
-        apiUrl={"https://agents.3ya.io"}
-        assistantId={"v3ya_external_agent"}
+        apiUrl={"https://agent.vivekmalipatel.com"}
+        assistantId={"v3ya_agent"}
         identity={identity}
       >
         <ThreadProvider>
@@ -28,7 +29,8 @@ function App() {
             <CustomComponentProvider>
               <SuggestionProvider>
                 <FileProvider>
-                  <Sidebar />
+                  {/* <Sidebar /> */}
+                  <Chat />
                 </FileProvider>
               </SuggestionProvider>
             </CustomComponentProvider>
