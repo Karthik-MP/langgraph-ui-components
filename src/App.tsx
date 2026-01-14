@@ -14,14 +14,14 @@ import Chat from "./pages/Chat/Chat";
 
 function App() {
   const [identity] = useState<ChatIdentity>({
-    // user_id: "68f3b3ba4ce23e5b582b7780",
+    user_id: "68f3b3ba4ce23e5b582b7780",
     org_id: "1",
   });
   return (
     <React.Suspense fallback={<div>Loading (layout)...</div>}>
       <ChatRuntimeProvider
-        apiUrl={"https://agent.vivekmalipatel.com"}
-        assistantId={"v3ya_agent"}
+        apiUrl={"https://agents.3ya.io"}
+        assistantId={"v3ya_external_agent"}
         identity={identity}
       >
         <ThreadProvider>
