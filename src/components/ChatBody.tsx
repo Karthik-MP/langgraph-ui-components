@@ -6,16 +6,24 @@ import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
 import Thinking from "./Thinking";
 import CustomComponentRender from "./messages/CustomComponentRender";
 
-export default function ChatBodyComponent() {
+export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>> }) {
   const stream = useStreamContext();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
+  // console.log("ChatBody render - messages count:", messages, "isLoading:", isLoading);
 
   // Memoize messages with stable reference
   const memoMessages = useMemo(() => messages ?? [], [messages]);
 
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const prevMessageCountRef = useRef(0);
+
+  // Set isFirstMessage to false when there are messages
+  useEffect(() => {
+    if (memoMessages.length > 0 && setIsFirstMessage) {
+      setIsFirstMessage(false);
+    }
+  }, [memoMessages.length, setIsFirstMessage]);
 
   // Memoize message rendering logic to prevent unnecessary re-renders
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
