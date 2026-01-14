@@ -11,3 +11,6 @@ export interface ChatSidebarProps {
     header?: string;
     chatProps?: ChatProps;
 }
+
+export interface ChatUIProps extends ChatProps {
+}

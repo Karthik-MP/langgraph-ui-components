@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import ChatButton from "../../components/ChatButton";
 import { AnimatePresence, motion } from "framer-motion";
 import ChatInput from "../../components/sidebar/ChatInput";
@@ -11,6 +11,7 @@ import type { FileInfo } from "@/types/fileInput";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import { useFileProvider } from "@/providers/FileProvider";
 import Suggestion from "@/components/Suggestion";
+import { useThread } from "@/providers/Thread";
 
 /**
  * Main sidebar chat interface component.
@@ -44,6 +45,12 @@ export default function Sidebar({
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
+  const { setMode } = useThread();
+
+  // Set thread mode to single when using Sidebar
+  useEffect(() => {
+    setMode("single");
+  }, [setMode]);
 
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
