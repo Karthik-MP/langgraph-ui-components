@@ -2,7 +2,6 @@
 import { useChatRuntime } from "@/providers/ChatRuntime";
 import { type Message } from "@langchain/langgraph-sdk";
 import { useStream } from "@langchain/langgraph-sdk/react";
-import { v4 as uuidv4 } from "uuid";
 import {
   isRemoveUIMessage,
   isUIMessage,
@@ -19,6 +18,7 @@ import {
   useMemo,
 } from "react";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 import { useThread } from "./Thread";
 
 export type StateType = {
@@ -26,6 +26,10 @@ export type StateType = {
   ui?: UIMessage[];
   suggestions?: string[];
 };
+
+async function sleep(ms = 4000) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const useTypedStream = useStream<
   StateType,
@@ -66,12 +70,12 @@ async function checkGraphStatus(apiUrl: string, authToken: string | null | undef
 
 const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string; children: ReactNode }) => {
   const { apiUrl, assistantId, identity } = useChatRuntime();
-  const { threadId, setThreadId, configuration } = useThread();
+  const { mode, threadId, setThreadId, configuration } = useThread();
 
   const streamValue = useTypedStream({
     apiUrl,
     assistantId,
-    threadId, // null initially → LangGraph creates it
+    threadId: mode === "multi" ? threadId : null,
     defaultHeaders: identity?.authToken
       ? { Authorization: `Bearer ${identity?.authToken}` }
       : undefined,
@@ -87,8 +91,13 @@ const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string
     },
 
     onThreadId: (id) => {
-      if (id && id !== threadId) {
-        setThreadId(id); // store once
+      if (!id) return;
+      if (mode === "single") {
+        // lock once
+        if (!threadId) setThreadId(id);
+      } else {
+        // switch freely
+        setThreadId(id);
       }
     },
   });
