@@ -1,10 +1,10 @@
 import { useStreamContext } from "@/providers/Stream";
-import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
-import AgentMessage from "./messages/AgentMessage";
-import HumanMessage from "./messages/HumanMessage";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import Thinking from "./Thinking";
+import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
+import HumanMessage from "./messages/HumanMessage";
 
 export default function ChatBodyComponent() {
   const stream = useStreamContext();
@@ -21,6 +21,8 @@ export default function ChatBodyComponent() {
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
     if (!msg.content.length) return null;
 
+    console.log("Rendering message:", msg, "at index:", index);
+
     // Skip tool messages that follow an AI message with tool calls
     if (
       isToolMessage(msg) &&
@@ -33,9 +35,12 @@ export default function ChatBodyComponent() {
     const isLastMessage = index === messagesArray.length - 1;
     const isStreamingThisMessage =
       isLoading && isLastMessage && msg.type === "ai";
+    
+    // Use message id or fallback to index for key
+    const msgKey = msg.id ?? `msg-${index}`;
 
     if (msg.type === "human") {
-      return <HumanMessage key={msg.id} message={msg} />;
+      return <HumanMessage key={msgKey} message={msg} />;
     }
 
     // Group AI message with tool calls and subsequent tool messages
@@ -57,18 +62,18 @@ export default function ChatBodyComponent() {
 
       if (hasTextContent) {
         return (
-          <Fragment key={msg.id}>
+          <React.Fragment key={msgKey}>
             <AgentMessage
               message={msg}
               isStreaming={isStreamingThisMessage}
             />
             <CustomComponentRender message={msg} thread={stream} />
-          </Fragment>
+          </React.Fragment>
         );
       } else {
         return (
           <Thinking
-            key={msg.id}
+            key={msgKey}
             title="Agent Thinking"
             message={msg}
             toolMessages={toolMessages}
@@ -80,24 +85,31 @@ export default function ChatBodyComponent() {
     // Standalone tool messages (shouldn't happen in normal flow)
     if (isToolMessage(msg)) {
       return (
-        <Thinking key={msg.id} title="Agent Thinking" message={msg} />
+        <Thinking key={msgKey} title="Agent Thinking" message={msg} />
       );
     }
 
     return (
-      <Fragment key={msg.id}>
+      <React.Fragment key={msgKey}>
         <CustomComponentRender message={msg} thread={stream} />
         <AgentMessage
           message={msg}
           isStreaming={isStreamingThisMessage}
         />
-      </Fragment>
+      </React.Fragment>
     );
   }, [isLoading, stream]);
 
   // Memoize the rendered messages array
   const renderedMessages = useMemo(() => {
-    return memoMessages.map((msg, index) => renderMessage(msg, index, memoMessages));
+    return memoMessages.map((msg, index) => {
+      const element = renderMessage(msg, index, memoMessages);
+      // Ensure every element has a key, using message id or fallback to index
+      if (element && !element.key) {
+        return React.cloneElement(element, { key: msg.id ?? `msg-${index}` });
+      }
+      return element;
+    });
   }, [memoMessages, renderMessage]);
 
   // Auto-scroll only when new messages are added or content updates
