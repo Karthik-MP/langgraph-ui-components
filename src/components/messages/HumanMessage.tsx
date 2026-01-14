@@ -1,8 +1,15 @@
+import { useStreamContext } from "@/providers/Stream";
 import type { Message } from "@langchain/langgraph-sdk";
-import { CircleUser, FileIcon } from "lucide-react";
-import React from "react";
+import { CircleUser, Copy, FileIcon, Pencil, Send, X } from "lucide-react";
+import React, { useState } from "react";
 
 function HumanMessage({ message }: { message: Message }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState("");
+  const thread = useStreamContext();
+  const meta = thread.getMessagesMetadata(message);
+  const parentCheckpoint = meta?.firstSeenState?.parent_checkpoint;
+
   // Extract text and documents from content
   const content = message.content;
   let textContent = "";
@@ -18,8 +25,38 @@ function HumanMessage({ message }: { message: Message }) {
     documents = content.filter((c: any) => c.type === "document") ?? [];
   }
 
+  const handleSubmitEdit = () => {
+    // Validate that edited text is not empty
+    if (!editedText.trim()) {
+      return;
+    }
+
+    setIsEditing(false);
+    console.log("Send edited message:", editedText);
+
+    const newMessage: Message = { type: "human", content: editedText };
+    thread.submit(
+      { messages: [newMessage] },
+      {
+        checkpoint: parentCheckpoint,
+        streamMode: ["values"],
+        streamSubgraphs: true,
+        streamResumable: true,
+        optimisticValues: (prev) => {
+          const values = meta?.firstSeenState?.values;
+          if (!values) return prev;
+
+          return {
+            ...values,
+            messages: [...(values.messages ?? []), newMessage],
+          };
+        },
+      },
+    );
+  };
+
   return (
-    <div className="flex items-end gap-3 justify-end w-full group">
+    <div className="flex items-end gap-3 justify-end w-full group my-1">
       <div className="flex flex-1 flex-col gap-2 items-end min-w-0">
         <span className="text-zinc-400 text-xs font-medium mr-1 opacity-80">
           You
@@ -27,9 +64,73 @@ function HumanMessage({ message }: { message: Message }) {
 
         {textContent && (
           <div className="relative">
-            <div className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25 max-w-full break-words overflow-wrap-anywhere transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.01]">
-              {textContent}
-            </div>
+            {isEditing ? (
+              <div className="flex flex-col gap-2 w-full">
+                <textarea
+                  value={editedText}
+                  onChange={(e) => setEditedText(e.target.value)}
+                  onKeyDown={(e)=>{
+                    if(e.key === "Enter"){
+                      e.preventDefault();
+                      handleSubmitEdit();
+                    }
+                  }}
+                  className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-zinc-900 border border-zinc-800 text-white shadow-lg max-w-full break-words overflow-wrap-anywhere resize-none focus:outline-none min-h-[60px]"
+                  autoFocus
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditedText("");
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
+                  >
+                    <X size={14} />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitEdit}
+                    disabled={!editedText.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send size={14} />
+                    Send
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-zinc-900 border border-zinc-900 text-white shadow-lg max-w-full break-words overflow-wrap-anywhere ">
+                  {textContent}
+                </div>
+                <div
+                  className="
+                    absolute right-1 my-2 flex items-center gap-2
+                    opacity-0 group-hover:opacity-100
+                    transition-opacity duration-300
+                    z-10
+                  "
+                >
+                  <Pencil
+                    size={16}
+                    className="text-zinc-500 cursor-pointer hover:text-white"
+                    onClick={() => {
+                      setIsEditing(true);
+                      setEditedText(textContent);
+                    }}
+                  />
+
+                  <Copy
+                    size={16}
+                    className="text-zinc-500 cursor-pointer hover:text-white"
+                    onClick={() => {
+                      navigator.clipboard.writeText(textContent);
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -37,7 +138,7 @@ function HumanMessage({ message }: { message: Message }) {
           <div className="flex flex-col gap-2 max-w-[90%]">
             {documents.map((doc, idx) => (
               <div
-                key={idx}
+                key={`${message.id}-doc-${idx}`}
                 className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
               >
                 <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover/file:bg-blue-500/20 transition-colors">
@@ -53,10 +154,10 @@ function HumanMessage({ message }: { message: Message }) {
       </div>
 
       <div
-        className="size-9 shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 ring-2 ring-blue-400/20 group-hover:shadow-xl group-hover:shadow-blue-500/40 transition-all duration-200"
+        className="size-9 shrink-0 flex items-center justify-center"
         data-alt="User Avatar"
       >
-        <CircleUser className="text-white" size={20} />
+        <CircleUser className="text-white" size={22} />
       </div>
     </div>
   );
