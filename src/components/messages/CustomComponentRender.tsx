@@ -21,12 +21,12 @@ function CustomComponentRender({
   if (!customComponents?.length) return null;
   
   return (
-    <Fragment key={message.id}>
+    <Fragment>
       {customComponents
         ?.filter((c) => !!components?.[c.name as keyof typeof components])
         .map((customComponent) => (
           <LoadExternalComponent
-            key={customComponent.id}
+            key={`${message.id}-${customComponent.id}`}
             stream={thread}
             message={customComponent}
             components={components}
