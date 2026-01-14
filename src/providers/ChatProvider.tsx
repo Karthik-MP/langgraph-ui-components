@@ -28,8 +28,6 @@ interface ChatProviderProps {
   children: React.ReactNode;
   /** Optional custom React components to render in chat messages */
   customComponents?: Record<string, React.FunctionComponent | React.ComponentClass>;
-  /** Fallback UI message while agent is down */
-  fallbackMessage?: string
 }
 
 /**
@@ -54,7 +52,6 @@ export function ChatProvider({
   identity,
   children,
   customComponents,
-  fallbackMessage
 }: ChatProviderProps) {
   return (
     <React.Suspense fallback={<div>Loading chat...</div>}>
@@ -64,7 +61,7 @@ export function ChatProvider({
         identity={identity}
       >
         <ThreadProvider>
-          <StreamProvider fallbackMessage={fallbackMessage}>
+          <StreamProvider>
             <SuggestionProvider>
               <CustomComponentProvider initialComponents={customComponents}>
                 <FileProvider>{children}</FileProvider>

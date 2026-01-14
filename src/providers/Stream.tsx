@@ -1,7 +1,7 @@
 /* @refresh reset */
 import { useChatRuntime } from "@/providers/ChatRuntime";
 import { type Message } from "@langchain/langgraph-sdk";
-import { useStream } from "@langchain/langgraph-sdk/react";
+import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
 import {
   isRemoveUIMessage,
   isUIMessage,
@@ -42,8 +42,13 @@ const useTypedStream = useStream<
   }
 >;
 
-type StreamContextType = ReturnType<typeof useTypedStream> & {
-  submit: ReturnType<typeof useTypedStream>["submit"];
+type StreamContextType = UseStream<StateType, {
+  UpdateType: {
+    messages?: Message[] | Message | string;
+    ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
+  };
+  CustomEventType: UIMessage | RemoveUIMessage;
+}> & {
   sendMessage: (
     message: Message | string,
     options?: {
@@ -68,7 +73,7 @@ async function checkGraphStatus(apiUrl: string, authToken: string | null | undef
   }
 }
 
-const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string; children: ReactNode }) => {
+const StreamSession = ({ children }: { children: ReactNode }) => {
   const { apiUrl, assistantId, identity } = useChatRuntime();
   const { mode, threadId, setThreadId, configuration } = useThread();
 
@@ -103,39 +108,6 @@ const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string
   });
 
   /**
-   * SINGLE THREAD submit
-   * user_id + org_id ALWAYS passed
-   */
-  const submit = useCallback(
-    async (
-      input: Parameters<typeof streamValue.submit>[0],
-      options?: Parameters<typeof streamValue.submit>[1]
-    ) => {
-      try {
-        return await streamValue.submit(input, {
-          ...options,
-          config: {
-            ...(options?.config ?? {}),
-            configurable: {
-              ...identity,
-              ...configuration,
-              ...(options?.config?.configurable ?? {}),
-            },
-          },
-        });
-      } catch (error) {
-        console.error("Agent API failed:", error);
-
-        // Add fallback message as an AI response
-        const errorMessage = fallbackMessage || "Agent is down. Will get back to you soon! Try again later.";
-
-        sendMessage(errorMessage, { type: "system" });
-      }
-    },
-    [streamValue, identity, configuration, fallbackMessage]
-  );
-
-  /**
    * Send a message to the agent programmatically
    * Useful for triggering agent actions without user-visible messages
    * e.g., "login completed", "card clicked: {id}"
@@ -159,14 +131,21 @@ const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string
             ...message,
           };
 
-      await submit(
+      await streamValue.submit(
         { messages: [messageObj] },
         {
-          config: options?.config,
+          config: {
+            ...options?.config,
+            configurable: {
+              ...identity,
+              ...configuration,
+              ...(options?.config?.configurable ?? {}),
+            },
+          },
         }
       );
     },
-    [submit]
+    [streamValue, identity, configuration]
   );
 
   useEffect(() => {
@@ -183,10 +162,9 @@ const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string
   const value = useMemo(
     () => ({
       ...streamValue,
-      submit,
       sendMessage,
     }),
-    [streamValue, submit, sendMessage]
+    [streamValue, sendMessage]
   );
 
   return (
@@ -198,17 +176,15 @@ const StreamSession = ({ fallbackMessage, children }: { fallbackMessage?: string
  * Provides streaming message functionality for real-time AI responses.
  * Manages message state, handles streaming updates, and provides submit/sendMessage functions.
  * 
- * @param fallbackMessage - Optional custom message to display when agent API fails (default: "Agent is down. Will get back to you soon! Try again later.")
- * 
  * @example
  * ```tsx
- * <StreamProvider fallbackMessage="Our AI is currently offline. Please try again soon.">
+ * <StreamProvider>
  *   <ChatInterface />
  * </StreamProvider>
  * ```
  */
-export function StreamProvider({ fallbackMessage, children }: { fallbackMessage?: string; children: ReactNode }) {
-  return <StreamSession fallbackMessage={fallbackMessage}>{children}</StreamSession>;
+export function StreamProvider({ children }: { children: ReactNode }) {
+  return <StreamSession>{children}</StreamSession>;
 }
 
 /**
