@@ -41,7 +41,7 @@ export default function ChatInput({
         <div className="flex flex-col gap-2 p-2 bg-zinc-900 border-b border-zinc-700 max-h-48 overflow-y-auto">
           {fileInput.map((file, index) => (
             <div
-              key={index}
+              key={`file-${index}-${file.fileName}`}
               className="flex items-center justify-between gap-3 bg-zinc-800 p-2 rounded group hover:bg-zinc-700 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
