@@ -138,22 +138,22 @@ export default function Chat({ callThisOnSubmit, handleFileSelect }: ChatUIProps
                             </h1>
 
                             <div className="w-full max-w-2xl px-4">
-                                <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={handleFileSelect || defaultHandleFileSelect} />
+                                <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                             </div>
                         </div> :
                         // =========================
                         // CHAT STATE (after message)
                         // =========================
                         <div className="flex h-full w-full flex-col">
-                            <div className="flex-1 overflow-y-auto">
+                            <div className="flex-1 overflow-y-auto thread-scrollbar">
                                 <div className="mx-auto max-w-3xl px-4 py-6">
                                     <ChatBody setIsFirstMessage={setIsFirstMessage} />
                                 </div>
                             </div>
 
-                            <div className="border-t border-white/10 px-4 py-4">
+                            <div className="border-t border-white/10 p-1">
                                 <div className="mx-auto max-w-3xl">
-                                    <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={handleFileSelect || defaultHandleFileSelect} />
+                                    <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                                 </div>
                             </div>
                         </div>

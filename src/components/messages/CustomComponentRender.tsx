@@ -19,6 +19,8 @@ function CustomComponentRender({
   const { components } = useCustomComponents();
 
   if (!customComponents?.length) return null;
+  console.log("Rendering CustomComponentRender for message id:", message);
+  console.log("Custom components found:", customComponents);
   
   return (
     <Fragment>
