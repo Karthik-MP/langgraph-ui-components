@@ -11,7 +11,6 @@ import type { FileInfo } from "@/types/fileInput";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import { useFileProvider } from "@/providers/FileProvider";
 import Suggestion from "@/components/Suggestion";
-import { useChatRuntime } from "@/providers/ChatRuntime";
 import { useThread } from "@/providers/Thread";
 
 /**
@@ -52,8 +51,6 @@ export default function Sidebar({
   useEffect(() => {
     setMode("single");
   }, [setMode]);
-  const { identity } = useChatRuntime();
-  const { configuration } = useThread();
 
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,16 +58,12 @@ export default function Sidebar({
     if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
       return;
 
-    // console.log("Submitting with input:", input);
-
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
       if (result && result.length > 0) latestFiles = result;
     }
-
-    // console.log("Using files for submission:", latestFiles);
 
     const contentBlocks = [
       ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
@@ -87,24 +80,8 @@ export default function Sidebar({
       content: contentBlocks,
     };
 
-    stream.submit(
-      { messages: [newHumanMessage] },
-      {
-        streamMode: ["values"],
-        streamSubgraphs: true,
-        streamResumable: true,
-        optimisticValues: (prev) => ({
-          ...prev,
-          messages: [...(prev.messages ?? []), newHumanMessage],
-        }),
-        config: {
-          configurable: {
-            ...identity,
-            ...configuration,
-          },
-        },
-      }
-    );
+    // Use the unified submitMessage function
+    await stream.submitMessage(newHumanMessage);
 
     setInput("");
     setFileInput([]);
