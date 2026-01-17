@@ -16,6 +16,7 @@ function App() {
   const [identity] = useState<ChatIdentity>({
     user_id: "68f3b3ba4ce23e5b582b7780",
     org_id: "1",
+    quote_id: "695b5cfcc4d07dc56f093d92",
   });
   return (
     <React.Suspense fallback={<div>Loading (layout)...</div>}>
@@ -29,8 +30,8 @@ function App() {
             <CustomComponentProvider>
               <SuggestionProvider>
                 <FileProvider>
-                  {/* <Sidebar /> */}
-                  <Chat />
+                  <Sidebar />
+                  {/* <Chat /> */}
                 </FileProvider>
               </SuggestionProvider>
             </CustomComponentProvider>

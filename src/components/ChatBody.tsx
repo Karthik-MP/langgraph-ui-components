@@ -29,14 +29,7 @@ export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: Re
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
     if (!msg.content.length) return null;
 
-    console.log("Rendering message:", msg, "at index:", index);
-
-    // Skip tool messages that follow an AI message with tool calls
-    if (
-      isToolMessage(msg) &&
-      index > 0 &&
-      isAiWithToolCalls(messagesArray[index - 1])
-    ) {
+    if (msg.additional_kwargs?.hidden) {
       return null;
     }
 
@@ -49,6 +42,11 @@ export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: Re
 
     if (msg.type === "human") {
       return <HumanMessage key={msgKey} message={msg} />;
+    }
+
+    // Skip standalone tool messages
+    if (isToolMessage(msg)) {
+      return null;
     }
 
     // Group AI message with tool calls and subsequent tool messages
@@ -64,46 +62,40 @@ export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: Re
       }
 
       // Check if there's text content to display
-      const hasTextContent =
-        Array.isArray(msg.content) &&
-        msg.content.some((c: any) => c.type === "text" && c.text?.trim());
+      // Handle both string and array content formats
+      const hasTextContent = 
+        (typeof msg.content === "string" && msg.content.trim()) ||
+        (Array.isArray(msg.content) && msg.content.some((c: any) => c.type === "text" && c.text?.trim()));
 
-      if (hasTextContent) {
-        return (
-          <React.Fragment key={msgKey}>
+      return (
+        <React.Fragment key={msgKey}>
+          {/* 1. Thinking indicator - only show if tool messages exist */}
+          {toolMessages.length > 0 && (
+            <Thinking
+              title="Agent Thinking"
+              toolMessages={toolMessages}
+            />
+          )}
+          {/* 2. Agent message (if has text) */}
+          {hasTextContent && (
             <AgentMessage
               message={msg}
               isStreaming={isStreamingThisMessage}
             />
-            <CustomComponentRender message={msg} thread={stream} />
-          </React.Fragment>
-        );
-      } else {
-        return (
-          <Thinking
-            key={msgKey}
-            title="Agent Thinking"
-            message={msg}
-            toolMessages={toolMessages}
-          />
-        );
-      }
-    }
-
-    // Standalone tool messages (shouldn't happen in normal flow)
-    if (isToolMessage(msg)) {
-      return (
-        <Thinking key={msgKey} title="Agent Thinking" message={msg} />
+          )}
+          {/* 3. Custom component */}
+          <CustomComponentRender message={msg} thread={stream} />
+        </React.Fragment>
       );
     }
 
     return (
       <React.Fragment key={msgKey}>
-        <CustomComponentRender message={msg} thread={stream} />
         <AgentMessage
           message={msg}
           isStreaming={isStreamingThisMessage}
         />
+        <CustomComponentRender message={msg} thread={stream} />
       </React.Fragment>
     );
   }, [isLoading, stream]);
@@ -141,7 +133,7 @@ export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: Re
   return (
     <div
       ref={messagesRef}
-      className="flex flex-col gap-4 rounded-4xl p-2 bg-black/20"
+      className="flex flex-col gap-4 rounded-4xl p-2"
     >
       {memoMessages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-zinc-500">

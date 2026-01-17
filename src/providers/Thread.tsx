@@ -15,7 +15,7 @@ interface ThreadContextType {
   /** Current thread ID, null if no thread exists yet */
   threadId: string | null;
   /** Set or update the current thread ID */
-  setThreadId: (id: string) => void;
+  setThreadId: (id: string | null) => void;
   /** List of existing threads */
   threads: Thread[];
   /** Function to fetch existing threads from the API */
