@@ -9,19 +9,20 @@ import {
     Plus,
     Search,
     Share2,
-    Trash2,
-    User
+    Trash2
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-type ThreadHeaderProp = {
-    header?: string
-}
+// type ThreadHeaderProp = {
+//     header?: string
+// }
 
-export default function ThreadHistory({ header = "AI Assistant" }: ThreadHeaderProp) {
+export default function ThreadHistory() {
     const [collapsed, setCollapsed] = useState(false);
-    const { threads, getThreads, setThreads, setThreadsLoading } = useThread();
-    // console.log("Rendering ThreadHistory", threads)
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const { threads, getThreads, setThreadId, setThreads, setThreadsLoading } = useThread();
+
     useEffect(() => {
         if (typeof window === "undefined") return;
         setThreadsLoading(true);
@@ -30,6 +31,26 @@ export default function ThreadHistory({ header = "AI Assistant" }: ThreadHeaderP
             .catch(console.error)
             .finally(() => setThreadsLoading(false));
     }, []);
+
+    // Filter threads based on search query
+    const filteredThreads = threads.filter((t) => {
+        if (!searchQuery.trim()) return true;
+
+        const searchLower = searchQuery.toLowerCase();
+        const threadName = (t.metadata?.name as string) || "";
+
+        // Check thread name
+        if (threadName.toLowerCase().includes(searchLower)) return true;
+
+        // Check first message content
+        const threadValues = t.values as any;
+        if (threadValues?.messages?.[0]) {
+            const firstMessageContent = getContentString(threadValues.messages[0].content);
+            if (firstMessageContent.toLowerCase().includes(searchLower)) return true;
+        }
+
+        return false;
+    });
 
     return (
         <aside
@@ -46,11 +67,35 @@ export default function ThreadHistory({ header = "AI Assistant" }: ThreadHeaderP
 
             {/* Primary actions */}
             <div className="flex flex-col gap-1 px-2 py-3">
-                <NavItem icon={<Plus />} label="New chat" collapsed={collapsed} />
-                <NavItem icon={<Search />} label="Search chats" collapsed={collapsed} />
-                {/* <NavItem icon={<Sparkles />} label="GPTs" collapsed={collapsed} /> */}
-                {/* <NavItem icon={<Image />} label="Images" collapsed={collapsed} /> */}
-                {/* <NavItem icon={<Grid />} label="Apps" collapsed={collapsed} /> */}
+                <NavItem icon={<Plus />} label="New chat" collapsed={collapsed} onClick={() => setThreadId(null)} />
+
+                {/* Search Toggle Button and Input */}
+                {!collapsed && !searchOpen && (
+                    <NavItem
+                        icon={<Search />}
+                        label="Search chats"
+                        collapsed={collapsed}
+                        onClick={() => setSearchOpen(true)}
+                    />
+                )}
+
+                {!collapsed && searchOpen && (
+                    <div className="px-2 py-2">
+                        <input
+                            type="text"
+                            placeholder="Search chats..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onBlur={() => {
+                                if (!searchQuery.trim()) {
+                                    setSearchOpen(false);
+                                }
+                            }}
+                            autoFocus
+                            className="w-full bg-zinc-800 text-white/80 text-sm px-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-zinc-600 placeholder:text-white/40"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Chats (scrollable) */}
@@ -58,10 +103,10 @@ export default function ThreadHistory({ header = "AI Assistant" }: ThreadHeaderP
                 {!collapsed && (
                     <>
                         <p className="mb-2 px-2 text-xs uppercase text-white/40">
-                            Your chats
+                            Your chats {searchQuery && `(${filteredThreads.length})`}
                         </p>
                         <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden thread-scrollbar">
-                            <ThreadList threads={threads} />
+                            <ThreadList threads={filteredThreads} />
                         </div>
                     </>
                 )}
@@ -69,14 +114,14 @@ export default function ThreadHistory({ header = "AI Assistant" }: ThreadHeaderP
             </div>
 
             {/* User */}
-            <div className="border-t border-white/10 p-2">
+            {/* <div className="border-t border-white/10 p-2">
                 <div className="flex items-center justify-center rounded-md p-2 hover:bg-white/10">
                     <User className="h-5 w-5 text-white/70" />
                     {!collapsed && (
                         <span className="ml-2 text-sm text-white/70">Karthik MP</span>
                     )}
                 </div>
-            </div>
+            </div> */}
         </aside>
     );
 }
@@ -87,19 +132,22 @@ function NavItem({
     icon,
     label,
     collapsed,
+    onClick
 }: {
     label: string;
     icon?: React.ReactNode;
     collapsed: boolean;
+    onClick?: () => void;
 }) {
     return (
-        <div
+        <button
             className="flex items-center gap-3 rounded-md px-2 py-2
         text-white/70 hover:bg-white/10 cursor-pointer"
+            onClick={onClick}
         >
             <div className="h-5 w-5">{icon}</div>
             {!collapsed && <span className="text-sm">{label}</span>}
-        </div>
+        </button>
     );
 }
 
@@ -146,9 +194,9 @@ function ThreadList({
 
     const handleRenameSubmit = async (thread: Thread) => {
         const threadValues = thread.values as any;
-        const originalName = thread.metadata?.name || 
+        const originalName = thread.metadata?.name ||
             (threadValues?.messages?.[0] ? getContentString(threadValues.messages[0].content) : thread.thread_id);
-        
+
         if (editValue.trim() && editValue.trim() !== originalName) {
             try {
                 await updateThread(thread.thread_id, {
@@ -171,12 +219,12 @@ function ThreadList({
 
     const handleMenuAction = async (action: string, thread: Thread) => {
         setDropdownThread(null);
-        
+
         try {
             switch (action) {
                 case 'rename': {
                     const threadValues = thread.values as any;
-                    const currentName: string = (thread.metadata?.name as string) || 
+                    const currentName: string = (thread.metadata?.name as string) ||
                         (threadValues?.messages?.[0] ? getContentString(threadValues.messages[0].content) : thread.thread_id);
                     setEditValue(currentName);
                     setEditingThread(thread.thread_id);
@@ -190,9 +238,9 @@ function ThreadList({
                     break;
                 }
                 case 'archive': {
-                    await updateThread(thread.thread_id, { 
+                    await updateThread(thread.thread_id, {
                         ...thread.metadata,
-                        archived: true 
+                        archived: true
                     });
                     break;
                 }
@@ -224,9 +272,9 @@ function ThreadList({
                     const firstMessage = (t.values as any).messages[0];
                     itemText = getContentString(firstMessage.content);
                 }
-                
+
                 const isEditing = editingThread === t.thread_id;
-                
+
                 return (
                     <div
                         key={t.thread_id}
@@ -264,7 +312,7 @@ function ThreadList({
                                     <p className="truncate text-ellipsis text-sm text-white/80">{itemText}</p>
                                 </button>
                             )}
-                            
+
                             {!isEditing && hoveredThread === t.thread_id && (
                                 <button
                                     className="flex-shrink-0 p-1 rounded-md hover:bg-zinc-700"
@@ -280,7 +328,7 @@ function ThreadList({
 
                         {/* Dropdown Menu */}
                         {dropdownThread === t.thread_id && (
-                            <div 
+                            <div
                                 ref={dropdownRef}
                                 className="absolute right-2 top-8 z-50 w-48 rounded-md bg-zinc-800 border border-white/10 shadow-lg py-1">
                                 <button
