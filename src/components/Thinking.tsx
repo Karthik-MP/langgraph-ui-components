@@ -2,17 +2,14 @@ import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
 import React, { useState } from "react";
 
-function Thinking({ title, message, toolMessages }: {
+function Thinking({ title, toolMessages }: {
   title?: string;
-  message: Message;
-  toolMessages?: Message[];
+  toolMessages: Message[];
 }) {
-  const [open, setOpen] = useState(true);
-  const content = message.content
-    ? getContentString(message.content)
-    : "";
+  const [open, setOpen] = useState(false);
 
-  if (!message?.id) return null;
+  // Only render if there are tool messages
+  if (!toolMessages || toolMessages.length === 0) return null;
 
   return (
     <div
@@ -23,7 +20,7 @@ function Thinking({ title, message, toolMessages }: {
       <h2 id="accordion-collapse-heading-1">
         <button
           type="button"
-          className="flex items-center justify-between w-full p-5 font-medium gap-3 text-body border-0 outline-none ring-0 appearance-none bg-transparent"
+          className="flex items-center justify-between w-full p-2 font-medium gap-3 text-body border-0 outline-none ring-0 appearance-none bg-transparent"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls="accordion-collapse-body-1"
@@ -55,10 +52,9 @@ function Thinking({ title, message, toolMessages }: {
         className={`${open ? "" : "hidden"}`}
         aria-labelledby="accordion-collapse-heading-1"
       >
-        <div className="p-4 md:p-5 text-left space-y-3">
-          <p className="mb-2 text-body">{content}</p>
-          {toolMessages?.map((toolMsg) => (
-            <div key={toolMsg.id} className="border-t border-zinc-700 pt-2 mt-2">
+        <div className="md:p-5 text-left space-y-3">
+          {toolMessages.map((toolMsg) => (
+            <div key={toolMsg.id} className="border-zinc-700">
               <p className="text-body text-sm">{toolMsg.content ? getContentString(toolMsg.content) : ""}</p>
             </div>
           ))}
@@ -69,6 +65,5 @@ function Thinking({ title, message, toolMessages }: {
 }
 
 export default React.memo(Thinking, (prevProps, nextProps) => {
-  return prevProps.message?.id === nextProps.message?.id &&
-    prevProps.toolMessages?.length === nextProps.toolMessages?.length;
+  return prevProps.toolMessages?.length === nextProps.toolMessages?.length;
 });

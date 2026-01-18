@@ -49,6 +49,38 @@ function App() {
 ## Exported Components
 
 - `Sidebar` - Main chat UI with sidebar navigation
+- `Chat` - Standalone chat interface with thread history
+
+## Component Props
+
+### Chat Component
+
+The `Chat` component provides a complete chat interface with thread history and file upload support.
+
+```tsx
+import { Chat } from 'agentic-chat-ui-components';
+
+<Chat 
+  enableToolCallIndicator={true}
+  callThisOnSubmit={async () => uploadedFiles}
+  handleFileSelect={customFileHandler}
+/>
+```
+
+**Props:**
+- `enableToolCallIndicator?: boolean` - Show visual indicators when AI tools are being executed. Default: `false`
+- `callThisOnSubmit?: () => Promise<FileInfo[]>` - Custom callback executed before message submission, useful for uploading files to external storage
+- `handleFileSelect?: (event: React.ChangeEvent<HTMLInputElement>) => void` - Custom file selection handler to override default behavior
+
+### Sidebar Component
+
+The `Sidebar` component provides a chat interface with collapsible sidebar navigation.
+
+```tsx
+import { Sidebar } from 'agentic-chat-ui-components';
+
+<Sidebar />
+```
 
 ## Exported Providers
 
