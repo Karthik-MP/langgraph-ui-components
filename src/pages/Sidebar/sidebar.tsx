@@ -37,8 +37,7 @@ export default function Sidebar({
   chatProps,
 }: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit } = chatProps ?? {};
-
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator } = chatProps ?? {};
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const { fileInput, setFileInput } = useFileProvider();
@@ -153,7 +152,7 @@ export default function Sidebar({
 
                 <div className="flex-1 overflow-auto scrollbar-none">
                   <div className="p-4">
-                    <ChatBody />
+                    <ChatBody enableToolCallIndicator={enableToolCallIndicator} />
                   </div>
                 </div>
                 <Suggestion />
