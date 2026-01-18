@@ -10,7 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useThread } from "@/providers/Thread";
 
-export default function Chat({ callThisOnSubmit, handleFileSelect }: ChatUIProps) {
+export default function Chat({ callThisOnSubmit, handleFileSelect, enableToolCallIndicator }: ChatUIProps) {
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
     const { fileInput, setFileInput } = useFileProvider();
@@ -65,18 +65,8 @@ export default function Chat({ callThisOnSubmit, handleFileSelect }: ChatUIProps
             content: contentBlocks,
         };
 
-        stream.submit(
-            { messages: [newHumanMessage] },
-            {
-                streamMode: ["values"],
-                streamSubgraphs: true,
-                streamResumable: true,
-                optimisticValues: (prev) => ({
-                    ...prev,
-                    messages: [...(prev.messages ?? []), newHumanMessage],
-                }),
-            }
-        );
+        // Use the unified submitMessage function
+        await stream.submitMessage(newHumanMessage);
 
         setIsFirstMessage(false);
         setInput("");
@@ -147,7 +137,7 @@ export default function Chat({ callThisOnSubmit, handleFileSelect }: ChatUIProps
                         <div className="flex h-full w-full flex-col">
                             <div className="flex-1 overflow-y-auto thread-scrollbar">
                                 <div className="mx-auto max-w-3xl px-4 py-6">
-                                    <ChatBody setIsFirstMessage={setIsFirstMessage} />
+                                    <ChatBody setIsFirstMessage={setIsFirstMessage} enableToolCallIndicator={enableToolCallIndicator} />
                                 </div>
                             </div>
 
