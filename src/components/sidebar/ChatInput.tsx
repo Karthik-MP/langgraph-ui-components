@@ -1,9 +1,9 @@
 import type { FileInfo } from "@/types/fileInput";
-import { FileIcon, Paperclip, StepForward, X } from "lucide-react";
+import { FileIcon, MoveUp, Paperclip, X } from "lucide-react";
 import {
   type ChangeEvent,
-  type FormEvent,
   type Dispatch,
+  type FormEvent,
   type SetStateAction,
 } from "react";
 
@@ -38,7 +38,7 @@ export default function ChatInput({
     >
       {/* File attachments preview */}
       {fileInput.length > 0 && (
-        <div className="flex flex-col gap-2 p-2 bg-zinc-900 border-b border-zinc-700 max-h-48 overflow-y-auto">
+        <div className="flex-1 flex-col gap-2 p-2 bg-zinc-900 border-b border-zinc-700 max-h-48 thread-scrollbar">
           {fileInput.map((file, index) => (
             <div
               key={`file-${index}-${file.fileName}`}
@@ -75,7 +75,12 @@ export default function ChatInput({
       <textarea
         placeholder="Type your message..."
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => {
+          setInput(e.target.value)
+          const maxHeight = 300; // max height in pixels
+          e.target.style.height = "auto"; // reset height
+          e.target.style.height = Math.min(e.target.scrollHeight, maxHeight) + "px";
+        }}
         onKeyDown={(e) => {
           if (
             e.key === "Enter" &&
@@ -90,7 +95,7 @@ export default function ChatInput({
           }
         }}
         disabled={isLoading}
-        className="w-full field-sizing-content resize-none p-3.5 bg-transparent text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full field-sizing-content resize-none p-3.5 bg-transparent text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed overflow-y-auto thread-scrollbar"
         rows={1}
       />
 
@@ -99,9 +104,8 @@ export default function ChatInput({
         <div className="flex gap-1 m-2">
           <label
             htmlFor="file-input"
-            className={`cursor-pointer ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`cursor-pointer ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
           >
             <Paperclip
               size={24}
@@ -133,14 +137,10 @@ export default function ChatInput({
           <button
             type="submit"
             disabled={!canSubmit}
-            className={`focus:outline-none transition-all ${
-              canSubmit
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-zinc-700 cursor-not-allowed opacity-50"
-            }`}
+            className="focus:outline-none transition-all bg-zinc-300 border rounded-full p-1 cursor-pointer"
             style={{ border: "none" }}
           >
-            <StepForward size={36} className="text-white rounded p-1" />
+            <MoveUp size={24} className="text-black p-1" />
           </button>
         </div>
       </div>
