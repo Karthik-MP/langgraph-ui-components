@@ -5,12 +5,14 @@ import Thinking from "./Thinking";
 import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
+import { logger } from "@/utils/logger";
 
-export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>> }) {
+export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean }) {
   const stream = useStreamContext();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
-  // console.log("ChatBody render - messages count:", messages, "isLoading:", isLoading);
+
+  logger.debug("ChatBody render - messages count:", messages, "isLoading:", isLoading);
 
   // Memoize messages with stable reference
   const memoMessages = useMemo(() => messages ?? [], [messages]);
@@ -70,7 +72,7 @@ export default function ChatBody({ setIsFirstMessage }: { setIsFirstMessage?: Re
       return (
         <React.Fragment key={msgKey}>
           {/* 1. Thinking indicator - only show if tool messages exist */}
-          {toolMessages.length > 0 && (
+          {toolMessages.length > 0 && enableToolCallIndicator && (
             <Thinking
               title="Agent Thinking"
               toolMessages={toolMessages}
