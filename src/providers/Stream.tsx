@@ -197,9 +197,11 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         // console.log("Appended AI message to localMessages:", options?.ui)
         // Also store any UI components, linking them to the message id
         if (options.ui && options.ui.length > 0) {
-          const uiWithMessageId = options.ui.map(ui => ({
+          const uiWithMessageId = options.ui.map((ui, index) => ({
             ...ui,
-            id: messageId, // Use the same message ID so CustomComponentRender can find it
+            id: messageId, // Link to the message ID so CustomComponentRender can find it
+            // Ensure each UI component has a unique identifier for React keys
+            _key: (ui as any)._key || `${messageId}-ui-${index}`,
           })) as UIMessage[];
           setLocalUI((prev) => [...prev, ...uiWithMessageId]);
         }
@@ -225,15 +227,31 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     [streamValue, identity, configuration, setLocalMessages, setLocalUI]
   );
 
-  // Combine stream messages with local AI messages, maintaining chronological order
+  // Combine stream messages with local AI messages, deduplicating by ID
   const combinedMessages = useMemo(() => {
-    return [...localMessages, ...(streamValue.messages || [])];
+    const allMessages = [...localMessages, ...(streamValue.messages || [])];
+    // Deduplicate by message ID, keeping the first occurrence
+    const seen = new Set<string>();
+    return allMessages.filter(msg => {
+      if (!msg.id) return true; // Keep messages without IDs
+      if (seen.has(msg.id)) return false;
+      seen.add(msg.id);
+      return true;
+    });
   }, [localMessages, streamValue.messages]);
 
-  // Combine local UI with stream UI
+  // Combine local UI with stream UI, deduplicating by unique key
   const combinedUI = useMemo(() => {
     // console.log("Combining local UI with stream UI:", localUI, streamValue.values?.ui);
-    return [...localUI, ...(streamValue.values?.ui || [])];
+    const allUI = [...localUI, ...(streamValue.values?.ui || [])];
+    // Deduplicate by _key or id+name combination
+    const seen = new Set<string>();
+    return allUI.filter(ui => {
+      const key = (ui as any)._key || `${ui.id}-${ui.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [localUI, streamValue.values?.ui]);
 
   const submitMessage = useCallback(

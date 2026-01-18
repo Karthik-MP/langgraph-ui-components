@@ -1,5 +1,6 @@
 import { useStreamContext } from "@/providers/Stream";
 import { useGeneratedSuggestions } from "@/providers/useChatSuggestions";
+import { LiquidButton } from "@/components/ui/button";
 
 export default function Suggestion() {
     const stream = useStreamContext();
@@ -28,25 +29,15 @@ export default function Suggestion() {
 
                     const handleClick = () => onSelect?.(suggestion);
 
-                    // const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-                    //     if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
-                    //         e.preventDefault();
-                    //         onSelect?.(suggestion);
-                    //     }
-                    // };
-
                     return (
-                        <div
-                            role="button"
-                            tabIndex={0}
-                            aria-pressed={false}
+                        <LiquidButton
                             key={`suggestion-${index}-${suggestion.slice(0, 20)}`}
+                            size="sm"
+                            className={`${sizeClass} text-center break-words`}
                             onClick={handleClick}
-                            // onKeyDown={handleKeyDown}
-                            className={`border rounded-xl px-3 py-2 border-zinc-500 text-center break-words ${sizeClass} cursor-pointer hover:bg-zinc-700/5 hover:scale-[1.01] transition transform focus:outline-none focus:ring-2 focus:ring-zinc-500`}
                         >
-                            {suggestion}
-                        </div>
+                            <span>{suggestion}</span>
+                        </LiquidButton>
                     );
                 })}
             </div>

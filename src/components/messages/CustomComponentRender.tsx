@@ -13,22 +13,23 @@ function CustomComponentRender({
   thread: ReturnType<typeof useStreamContext>;
 }) {
   const { values } = useStreamContext();
-  const customComponents = values.ui?.filter(
-    (ui) => ui?.id === message.id
-  );
   const { components } = useCustomComponents();
+  
+  // Memoize filtered components to prevent unnecessary re-renders
+  const customComponents = React.useMemo(() => {
+    return values.ui?.filter((ui) => ui?.id === message.id);
+  }, [values.ui, message.id]);
+
 
   if (!customComponents?.length) return null;
-  console.log("Rendering CustomComponentRender for message id:", message);
-  console.log("Custom components found:", customComponents);
   
   return (
     <Fragment>
       {customComponents
         ?.filter((c) => !!components?.[c.name as keyof typeof components])
-        .map((customComponent) => (
+        .map((customComponent, index) => (
           <LoadExternalComponent
-            key={`${message.id}-${customComponent.id}`}
+            key={(customComponent as any)._key || `${message.id}-${customComponent.id || index}`}
             stream={thread}
             message={customComponent}
             components={components}
@@ -39,6 +40,4 @@ function CustomComponentRender({
   );
 }
 
-export default React.memo(CustomComponentRender, (prevProps, nextProps) => {
-  return prevProps.message.id === nextProps.message.id;
-});
+export default React.memo(CustomComponentRender);
