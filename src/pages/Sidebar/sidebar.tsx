@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import ChatButton from "../../components/ChatButton";
 import { AnimatePresence, motion } from "framer-motion";
 import ChatInput from "../../components/sidebar/ChatInput";
@@ -11,7 +11,6 @@ import type { FileInfo } from "@/types/fileInput";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import { useFileProvider } from "@/providers/FileProvider";
 import Suggestion from "@/components/Suggestion";
-import { useChatRuntime } from "@/providers/ChatRuntime";
 import { useThread } from "@/providers/Thread";
 
 /**
@@ -38,16 +37,19 @@ export default function Sidebar({
   chatProps,
 }: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit } = chatProps ?? {};
-
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator } = chatProps ?? {};
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const { fileInput, setFileInput } = useFileProvider();
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
-  const { identity } = useChatRuntime();
-  const { configuration } = useThread();
+  const { setMode } = useThread();
+
+  // Set thread mode to single when using Sidebar
+  useEffect(() => {
+    setMode("single");
+  }, [setMode]);
 
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -55,16 +57,12 @@ export default function Sidebar({
     if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
       return;
 
-    // console.log("Submitting with input:", input);
-
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
       if (result && result.length > 0) latestFiles = result;
     }
-
-    // console.log("Using files for submission:", latestFiles);
 
     const contentBlocks = [
       ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
@@ -81,24 +79,8 @@ export default function Sidebar({
       content: contentBlocks,
     };
 
-    stream.submit(
-      { messages: [newHumanMessage] },
-      {
-        streamMode: ["values"],
-        streamSubgraphs: true,
-        streamResumable: true,
-        optimisticValues: (prev) => ({
-          ...prev,
-          messages: [...(prev.messages ?? []), newHumanMessage],
-        }),
-        config: {
-          configurable: {
-            ...identity,
-            ...configuration,
-          },
-        },
-      }
-    );
+    // Use the unified submitMessage function
+    await stream.submitMessage(newHumanMessage);
 
     setInput("");
     setFileInput([]);
@@ -170,7 +152,7 @@ export default function Sidebar({
 
                 <div className="flex-1 overflow-auto scrollbar-none">
                   <div className="p-4">
-                    <ChatBody />
+                    <ChatBody enableToolCallIndicator={enableToolCallIndicator} />
                   </div>
                 </div>
                 <Suggestion />

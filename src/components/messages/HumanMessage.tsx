@@ -32,7 +32,7 @@ function HumanMessage({ message }: { message: Message }) {
     }
 
     setIsEditing(false);
-    console.log("Send edited message:", editedText);
+    // console.log("Send edited message:", editedText);
 
     const newMessage: Message = { type: "human", content: editedText };
     thread.submit(
@@ -75,7 +75,7 @@ function HumanMessage({ message }: { message: Message }) {
                       handleSubmitEdit();
                     }
                   }}
-                  className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-zinc-900 border border-zinc-800 text-white shadow-lg max-w-full break-words overflow-wrap-anywhere resize-none focus:outline-none min-h-[60px]"
+                  className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-zinc-900 border border-zinc-800 text-white shadow-lg break-words overflow-wrap-anywhere resize-none focus:outline-none min-h-[60px]"
                   autoFocus
                 />
                 <div className="flex items-center justify-end gap-2">
