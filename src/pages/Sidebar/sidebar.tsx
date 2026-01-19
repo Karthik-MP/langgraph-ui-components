@@ -1,17 +1,17 @@
-import { v4 as uuidv4 } from "uuid";
-import { useEffect, useState, type FormEvent } from "react";
-import ChatButton from "../../components/ChatButton";
-import { AnimatePresence, motion } from "framer-motion";
-import ChatInput from "../../components/sidebar/ChatInput";
-import ChatBody from "../../components/ChatBody";
-import { useStreamContext } from "@/providers/Stream";
-import type { Message } from "@langchain/langgraph-sdk";
-import { X } from "lucide-react";
-import type { FileInfo } from "@/types/fileInput";
-import type { ChatSidebarProps } from "@/types/ChatProps";
-import { useFileProvider } from "@/providers/FileProvider";
 import Suggestion from "@/components/Suggestion";
+import { useFileProvider } from "@/providers/FileProvider";
+import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
+import type { ChatSidebarProps } from "@/types/ChatProps";
+import type { FileInfo } from "@/types/fileInput";
+import type { Message } from "@langchain/langgraph-sdk";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { v4 as uuidv4 } from "uuid";
+import ChatBody from "../../components/ChatBody";
+import ChatButton from "../../components/ChatButton";
+import ChatInput from "../../components/sidebar/ChatInput";
 
 /**
  * Main sidebar chat interface component.
@@ -32,12 +32,9 @@ import { useThread } from "@/providers/Thread";
  * />
  * ```
  */
-export default function Sidebar({
-  header = "AI Assistant",
-  chatProps,
-}: ChatSidebarProps) {
+export default function Sidebar({ chatProps }: { chatProps: ChatSidebarProps }) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator } = chatProps ?? {};
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header } = chatProps ?? {};
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const { fileInput, setFileInput } = useFileProvider();
@@ -118,7 +115,7 @@ export default function Sidebar({
   };
 
   const onFileSelect = handleFileSelect || defaultHandleFileSelect;
-
+  console.log("HEADER LOGO URL:", header);
   return (
     <>
       <AnimatePresence>
@@ -143,7 +140,17 @@ export default function Sidebar({
             >
               <div className="flex h-full flex-col">
                 <div className="flex border-b border-zinc-800 py-4 px-6 justify-between items-center">
-                  <div className="text-start text-2xl font-bold">{header}</div>
+                  <div className="flex items-center gap-3">
+                    {header?.logoUrl && (
+                      // Render provided logo image if present
+                      <img
+                        src={header?.logoUrl}
+                        alt={header?.title ? `${header.title} logo` : "AI Assistant logo"}
+                        className="h-8 w-8 object-contain rounded-sm"
+                      />
+                    )}
+                    <div className="text-start text-2xl font-bold">{header?.title || "AI Assistant"}</div>
+                  </div>
                   <X
                     className="text-zinc-400 cursor-pointer"
                     onClick={() => setOpen(false)}
