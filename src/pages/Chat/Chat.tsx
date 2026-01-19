@@ -121,7 +121,7 @@ export default function Chat({ callThisOnSubmit, handleFileSelect, enableToolCal
 
                 {/* CONTENT AREA */}
                 <div className="relative flex flex-1 overflow-hidden">
-                    {isFirstMessage ? 
+                    {isFirstMessage ?
                         <div className="flex flex-1 flex-col items-center justify-center">
                             <h1 className="mb-8 text-2xl font-medium text-white/80">
                                 What are you working on?
