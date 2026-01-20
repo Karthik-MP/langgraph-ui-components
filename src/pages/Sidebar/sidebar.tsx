@@ -32,9 +32,9 @@ import ChatInput from "../../components/sidebar/ChatInput";
  * />
  * ```
  */
-export default function Sidebar({ chatProps }: { chatProps: ChatSidebarProps }) {
+export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header } = chatProps ?? {};
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const { fileInput, setFileInput } = useFileProvider();
@@ -115,7 +115,7 @@ export default function Sidebar({ chatProps }: { chatProps: ChatSidebarProps }) 
   };
 
   const onFileSelect = handleFileSelect || defaultHandleFileSelect;
-  console.log("HEADER LOGO URL:", header);
+  
   return (
     <>
       <AnimatePresence>
@@ -166,7 +166,7 @@ export default function Sidebar({ chatProps }: { chatProps: ChatSidebarProps }) 
                 <div className="sticky bottom-0 border-t border-zinc-800 m-2">
                   <ChatInput
                     input={input}
-                    inputFileAccept={chatProps?.inputFileAccept}
+                    inputFileAccept={inputFileAccept}
                     setInput={setInput}
                     handleSubmit={defaultHandleSubmit}
                     isLoading={isLoading}
