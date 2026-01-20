@@ -52,10 +52,6 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
       return null;
     }
 
-    const isLastMessage = index === messagesArray.length - 1;
-    const isStreamingThisMessage =
-      isLoading && isLastMessage && msg.type === "ai";
-
     // Use message id or fallback to index for key
     const msgKey = msg.id ?? `msg-${index}`;
 
@@ -68,53 +64,88 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
       return null;
     }
 
-    // Group AI message with tool calls and subsequent tool messages
-    if (isAiWithToolCalls(msg)) {
-      const toolMessages = [];
-      let nextIndex = index + 1;
-      while (
-        nextIndex < messagesArray.length &&
-        isToolMessage(messagesArray[nextIndex])
-      ) {
-        toolMessages.push(messagesArray[nextIndex]);
-        nextIndex++;
+    // Skip if this AI message was already combined with a previous one
+    if (msg.type === "ai" && index > 0) {
+      // Check if previous non-tool message is also an AI message
+      let prevIndex = index - 1;
+      while (prevIndex >= 0 && isToolMessage(messagesArray[prevIndex])) {
+        prevIndex--;
       }
-
-      // Check if there's text content to display
-      // Handle both string and array content formats
-      const hasTextContent =
-        (typeof msg.content === "string" && msg.content.trim()) ||
-        (Array.isArray(msg.content) && msg.content.some((c: any) => c.type === "text" && c.text?.trim()));
-
-      return (
-        <React.Fragment key={msgKey}>
-          {/* 1. Thinking indicator - only show if tool messages exist */}
-          {toolMessages.length > 0 && enableToolCallIndicator && (
-            <ToolCallFunctions
-              title="Agent Thinking"
-              toolMessages={toolMessages}
-            />
-          )}
-          {/* 2. Agent message (if has text) */}
-          {hasTextContent && (
-            <AgentMessage
-              message={msg}
-              isStreaming={isStreamingThisMessage}
-            />
-          )}
-          {/* 3. Custom component */}
-          <CustomComponentRender message={msg} thread={stream} />
-        </React.Fragment>
-      );
+      
+      if (prevIndex >= 0 && messagesArray[prevIndex].type === "ai") {
+        // This is a consecutive AI message, skip it (it will be combined with the previous one)
+        return null;
+      }
     }
+
+    // Collect all consecutive AI messages and tool messages
+    const groupedMessages = [msg];
+    const toolMessages = [];
+    let nextIndex = index + 1;
+    
+    while (nextIndex < messagesArray.length) {
+      const nextMsg = messagesArray[nextIndex];
+      
+      if (isToolMessage(nextMsg)) {
+        toolMessages.push(nextMsg);
+        nextIndex++;
+      } else if (nextMsg.type === "ai") {
+        // Combine consecutive AI messages
+        groupedMessages.push(nextMsg);
+        nextIndex++;
+      } else {
+        // Stop at human messages or other types
+        break;
+      }
+    }
+
+    // Combine content from all AI messages
+    const combinedContent = groupedMessages
+      .map(m => {
+        if (typeof m.content === "string") return m.content;
+        if (Array.isArray(m.content)) {
+          return m.content
+            .map((c: any) => c.type === "text" ? c.text : "")
+            .filter(Boolean)
+            .join(" ");
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+
+    // Create a combined message object
+    const combinedMessage = {
+      ...msg,
+      content: combinedContent,
+    };
+
+    const isLastMessageGroup = nextIndex >= messagesArray.length;
+    const isStreamingThisMessage = isLoading && isLastMessageGroup;
+
+    // Check if the first message in the group has tool calls
+    const hasToolCalls = isAiWithToolCalls(msg);
 
     return (
       <React.Fragment key={msgKey}>
-        <AgentMessage
-          message={msg}
-          isStreaming={isStreamingThisMessage}
-        />
-        <CustomComponentRender message={msg} thread={stream} />
+        {/* 1. Thinking indicator - only show if tool messages exist */}
+        {toolMessages.length > 0 && enableToolCallIndicator && hasToolCalls && (
+          <ToolCallFunctions
+            title="Agent Thinking"
+            toolMessages={toolMessages}
+          />
+        )}
+        {/* 2. Agent message (combined content) */}
+        {combinedContent && (
+          <AgentMessage
+            message={combinedMessage}
+            isStreaming={isStreamingThisMessage}
+          />
+        )}
+        {/* 3. Custom component (from all messages in the group) */}
+        {groupedMessages.map((m) => (
+          <CustomComponentRender key={m.id} message={m} thread={stream} />
+        ))}
       </React.Fragment>
     );
   }, [isLoading, stream, enableToolCallIndicator]);
