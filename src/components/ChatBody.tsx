@@ -46,7 +46,8 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
 
   // Memoize message rendering logic to prevent unnecessary re-renders
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
-    if (!msg.content.length) return null;
+    // Skip empty content messages UNLESS they have tool calls (which means tool messages will follow)
+    if (!msg.content.length && !isAiWithToolCalls(msg)) return null;
 
     if (msg.additional_kwargs?.hidden) {
       return null;
