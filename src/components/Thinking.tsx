@@ -6,7 +6,7 @@ export default function Thinking() {
                     position: relative;
                     display: flex;
                     align-items: center;
-                    justify-content: center;
+                    justify-content: flex-start;
                     color: white;
                     user-select: none;
                     gap: 10px;
