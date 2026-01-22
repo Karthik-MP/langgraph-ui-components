@@ -2,7 +2,7 @@ import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { BotMessageSquare, Loader2 } from "lucide-react";
 import React from "react";
-import { AgentMarkdown } from "./AgentMarkdown";
+import { AgentMarkdown } from "../ui/AgentMarkdown";
 
 function AgentMessage({
   message,
