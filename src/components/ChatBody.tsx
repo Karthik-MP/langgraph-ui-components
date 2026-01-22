@@ -72,7 +72,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
       while (prevIndex >= 0 && isToolMessage(messagesArray[prevIndex])) {
         prevIndex--;
       }
-      
+
       if (prevIndex >= 0 && messagesArray[prevIndex].type === "ai") {
         // This is a consecutive AI message, skip it (it will be combined with the previous one)
         return null;
@@ -83,10 +83,10 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
     const groupedMessages = [msg];
     const toolMessages = [];
     let nextIndex = index + 1;
-    
+
     while (nextIndex < messagesArray.length) {
       const nextMsg = messagesArray[nextIndex];
-      
+
       if (isToolMessage(nextMsg)) {
         toolMessages.push(nextMsg);
         nextIndex++;
@@ -127,9 +127,15 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
     // Check if the first message in the group has tool calls
     const hasToolCalls = isAiWithToolCalls(msg);
 
+    // Show thinking if streaming and no content yet (only tool calls exist)
+    const showThinkingIndicator = isStreamingThisMessage && !combinedContent && hasToolCalls;
+
     return (
       <React.Fragment key={msgKey}>
-        {/* 1. Thinking indicator - only show if tool messages exist */}
+        {/* 1. Thinking indicator - show when streaming with no content OR when tool messages exist */}
+        {showThinkingIndicator && enableToolCallIndicator && (
+          <Thinking />
+        )}
         {toolMessages.length > 0 && enableToolCallIndicator && hasToolCalls && (
           <ToolCallFunctions
             title="Agent Thinking"
@@ -238,15 +244,18 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
       ) : (
         <>
           {renderedMessages}
-          {/* Show thinking indicator when loading but no AI response yet */}
-          {isLoading && memoMessages.length > 0 && memoMessages[memoMessages.length - 1].type === "human" && (
-            <div className="flex items-center gap-2">
-              {/* Thinking<span className="animate-pulse">...</span> */}
+          {/* Show thinking indicator when loading and no AI response has started yet */}
+          {isLoading && memoMessages.length > 0 && (() => {
+            const lastMsg = memoMessages[memoMessages.length - 1];
+            // Show if last message is human or if last AI has no content (only tool calls)
+            return lastMsg.type === "human" ||
+              (lastMsg.type === "ai" && !lastMsg.content && isAiWithToolCalls(lastMsg));
+          })() && (
               <Thinking />
-            </div>
-          )}
+            )}
         </>
       )}
+
     </div>
   );
 }
