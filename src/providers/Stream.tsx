@@ -80,6 +80,7 @@ type StreamContextType = UseStream<StateType, {
       config?: any;
     }
   ) => Promise<void>;
+  fetchCatalog: () => Promise<any | null>;
 };
 
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
@@ -92,6 +93,23 @@ async function checkGraphStatus(apiUrl: string, authToken: string | null | undef
     return res.ok;
   } catch {
     console.error("Failed to intialize LangGraph Agent");
+  }
+}
+
+async function fetchCatalog(apiUrl: string, authToken: string | null | undefined) {
+  try {
+    const res = await fetch(`${apiUrl}/agents/catalog`, {
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+    return null;
+  }
+  catch {
+    console.error("Failed to fetch LangGraph Catalog");
+    return null;
   }
 }
 
@@ -255,41 +273,41 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
   }, [localUI, streamValue.values?.ui]);
 
   const submitMessage = useCallback(
-  async (
-    message: Message,
-    options?: {
-      streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
-      streamSubgraphs?: boolean;
-      streamResumable?: boolean;
-      config?: any;
-    }
-  ) => {
-    // Get ALL current messages (including local AI messages)
-    const allCurrentMessages = combinedMessages || [];
-
-    await streamValue.submit(
-      { messages: [...allCurrentMessages, message] },
-      {
-        streamMode: options?.streamMode || ["values"],
-        streamSubgraphs: options?.streamSubgraphs ?? true,
-        streamResumable: options?.streamResumable ?? true,
-        optimisticValues: (prev) => ({
-          ...prev,
-          messages: [...allCurrentMessages, message],
-        }),
-        config: {
-          ...options?.config,
-          configurable: {
-            ...identity,
-            ...configuration,
-            ...(options?.config?.configurable ?? {}),
-          },
-        },
+    async (
+      message: Message,
+      options?: {
+        streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
+        streamSubgraphs?: boolean;
+        streamResumable?: boolean;
+        config?: any;
       }
-    );
-  },
-  [streamValue, identity, configuration, combinedMessages]
-);
+    ) => {
+      // Get ALL current messages (including local AI messages)
+      const allCurrentMessages = combinedMessages || [];
+
+      await streamValue.submit(
+        { messages: [...allCurrentMessages, message] },
+        {
+          streamMode: options?.streamMode || ["values"],
+          streamSubgraphs: options?.streamSubgraphs ?? true,
+          streamResumable: options?.streamResumable ?? true,
+          optimisticValues: (prev) => ({
+            ...prev,
+            messages: [...allCurrentMessages, message],
+          }),
+          config: {
+            ...options?.config,
+            configurable: {
+              ...identity,
+              ...configuration,
+              ...(options?.config?.configurable ?? {}),
+            },
+          },
+        }
+      );
+    },
+    [streamValue, identity, configuration, combinedMessages]
+  );
 
   useEffect(() => {
     checkGraphStatus(apiUrl, identity?.authToken).then((ok) => {
@@ -312,6 +330,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       },
       sendMessage,
       submitMessage,
+      fetchCatalog: () => fetchCatalog(apiUrl, identity?.authToken),
     }),
     [streamValue, combinedMessages, combinedUI, sendMessage, submitMessage]
   );
