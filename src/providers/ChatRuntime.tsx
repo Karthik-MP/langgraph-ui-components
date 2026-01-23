@@ -1,5 +1,5 @@
 /* @refresh reset */
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 /**
  * Identity information for the chat runtime.
@@ -25,6 +25,8 @@ export type ChatRuntimeContextValue = {
   apiUrl: string;
   /** Unique identifier for the assistant/agent */
   assistantId: string;
+  /** Function to update the assistant ID */
+  setAssistantId: (assistantId: string) => void;
   /** Optional user identity and authentication information */
   identity?: ChatIdentity | null;
 };
@@ -61,13 +63,17 @@ type ChatRuntimeProviderProps = {
  */
 export function ChatRuntimeProvider({
   apiUrl,
-  assistantId,
+  assistantId: initialAssistantId,
   identity,
   children,
 }: ChatRuntimeProviderProps) {
+  
+  const [assistantId, setAssistantId] = useState(initialAssistantId);
+
   const value: ChatRuntimeContextValue = useMemo(() => ({
     apiUrl,
     assistantId,
+    setAssistantId,
     identity,
   }), [apiUrl, assistantId, identity]);
 
