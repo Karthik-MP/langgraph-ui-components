@@ -1,23 +1,41 @@
 import ChatBody from "@/components/ChatBody";
 import ChatInput from "@/components/sidebar/ChatInput";
 import ThreadHistory from "@/components/threads/ThreadHistory";
+import { useChatRuntime } from "@/providers/ChatRuntime";
 import { useFileProvider } from "@/providers/FileProvider";
 import { useStreamContext } from "@/providers/Stream";
+import { useThread } from "@/providers/Thread";
 import type { ChatUIProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
 import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { useThread } from "@/providers/Thread";
 
 export default function Chat({ callThisOnSubmit, handleFileSelect, enableToolCallIndicator }: ChatUIProps) {
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const { fileInput, setFileInput } = useFileProvider();
-
+    const [agents, setAgents] = useState<Array<string>>([]);
+    const { fetchCatalog } = useStreamContext();
     const stream = useStreamContext();
+    const { assistantId, setAssistantId } = useChatRuntime();
     const isLoading = stream.isLoading;
     const { setMode, threadId } = useThread();
+
+    useEffect(() => {
+        // Fetch the agent catalog on component mount
+        fetchCatalog();
+        setAgents(["V3ya_external_agent", "chat_agent"]);
+    }, [fetchCatalog]);
+
+    const handleAgentChange = (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
+        const selectedAgent = (event.target as HTMLElement).innerText;
+        console.log("Selected agent:", selectedAgent);
+        setAssistantId(selectedAgent);
+        setIsDropdownOpen(false);
+    }
+
 
     // Set thread mode to multi when using Chat
     useEffect(() => {
@@ -112,11 +130,35 @@ export default function Chat({ callThisOnSubmit, handleFileSelect, enableToolCal
             <main className="flex flex-1 flex-col">
                 {/* Header */}
                 <header className="flex h-14 items-center justify-between border-b border-white/10 px-6">
-                    <span className="text-sm text-white/80">ChatGPT 5.2s</span>
+                    {/* <span className="text-sm text-white/80">ChatGPT 5.2s</span> */}
                     {/* <div className="flex gap-2">
                         <div className="h-8 w-8 rounded-full bg-white/10" />
                         <div className="h-8 w-8 rounded-full bg-white/10" />
                     </div> */}
+
+                    <button
+                        id="dropdownDividerButton"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="inline-flex items-center justify-center text-white bg-brand box-border border rounded-2xl border-transparent hover:bg-brand-strong font-medium leading-5 rounded-base text-sm px-4 py-2.5 bg-zinc-800"
+                        type="button"
+                    >
+                        {assistantId}
+                        <svg className="w-4 h-4 ms-1.5 -me-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" /></svg>
+                    </button>
+
+                    <div id="dropdownDivider" className={`z-10 absolute top-14 bg-neutral-primary-medium bg-zinc-800 rounded-2xl  divide-y divide-default-medium w-44 ${isDropdownOpen ? '' : 'hidden'}`}>
+                        <ul className="p-2 text-sm text-body font-medium" aria-labelledby="dropdownDividerButton">
+                            {agents.map((agentName) => (
+                                <li key={agentName} className="hover:bg-zinc-700 hover:rounded-2xl" onClick={handleAgentChange}>
+                                    <span className="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{agentName}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        {/* <div className="p-2 text-sm text-body font-medium">
+                            <a href="#" className="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">Separated link</a>
+                        </div> */}
+                    </div>
+
                 </header>
 
                 {/* CONTENT AREA */}
