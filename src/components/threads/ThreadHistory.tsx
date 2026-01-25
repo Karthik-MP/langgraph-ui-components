@@ -1,3 +1,4 @@
+import useTools from "@/hooks/useTools";
 import { useThread } from "@/providers/Thread";
 import { getContentString } from "@/utils/utils";
 import type { Thread } from "@langchain/langgraph-sdk";
@@ -6,8 +7,6 @@ import {
     MoreVertical,
     PanelLeft,
     Pencil,
-    Plus,
-    Search,
     Share2,
     Trash2
 } from "lucide-react";
@@ -22,6 +21,7 @@ export default function ThreadHistory() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const { threads, getThreads, setThreadId, setThreads, setThreadsLoading } = useThread();
+    const { tool } = useTools();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -67,35 +67,48 @@ export default function ThreadHistory() {
 
             {/* Primary actions */}
             <div className="flex flex-col gap-1 px-2 py-3">
-                <NavItem icon={<Plus />} label="New chat" collapsed={collapsed} onClick={() => setThreadId(null)} />
 
-                {/* Search Toggle Button and Input */}
-                {!collapsed && !searchOpen && (
-                    <NavItem
-                        icon={<Search />}
-                        label="Search chats"
-                        collapsed={collapsed}
-                        onClick={() => setSearchOpen(true)}
-                    />
-                )}
+                {tool.map((t, index) => {
+                    // Override onClick for specific tools
+                    let handleClick = t.onClick;
+                    if (t.label === 'New chat') {
+                        handleClick = () => setThreadId(null);
+                    } else if (t.label === 'Search') {
+                        handleClick = () => setSearchOpen(true);
+                    }
 
-                {!collapsed && searchOpen && (
-                    <div className="px-2 py-2">
-                        <input
-                            type="text"
-                            placeholder="Search chats..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onBlur={() => {
-                                if (!searchQuery.trim()) {
-                                    setSearchOpen(false);
-                                }
-                            }}
-                            autoFocus
-                            className="w-full bg-zinc-800 text-white/80 text-sm px-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-zinc-600 placeholder:text-white/40"
+                    // Show search input instead of search button when searchOpen is true
+                    if (t.label === 'Search' && !collapsed && searchOpen) {
+                        return (
+                            <div key={index} className="px-2 py-2">
+                                <input
+                                    type="text"
+                                    placeholder="Search chats..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onBlur={() => {
+                                        if (!searchQuery.trim()) {
+                                            setSearchOpen(false);
+                                        }
+                                    }}
+                                    autoFocus
+                                    className="w-full bg-zinc-800 text-white/80 text-sm px-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-zinc-600 placeholder:text-white/40"
+                                />
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <NavItem 
+                            key={index}
+                            icon={t.icon} 
+                            label={t.label} 
+                            alt={t.alt}
+                            collapsed={collapsed} 
+                            onClick={handleClick} 
                         />
-                    </div>
-                )}
+                    );
+                })}
             </div>
 
             {/* Chats (scrollable) */}
@@ -131,11 +144,13 @@ export default function ThreadHistory() {
 function NavItem({
     icon,
     label,
+    alt,
     collapsed,
     onClick
 }: {
     label: string;
     icon?: React.ReactNode;
+    alt?: string;
     collapsed: boolean;
     onClick?: () => void;
 }) {
@@ -144,6 +159,7 @@ function NavItem({
             className="flex items-center gap-3 rounded-md px-2 py-2
         text-white/70 hover:bg-white/10 cursor-pointer"
             onClick={onClick}
+            title={alt || label}
         >
             <div className="h-5 w-5">{icon}</div>
             {!collapsed && <span className="text-sm">{label}</span>}
