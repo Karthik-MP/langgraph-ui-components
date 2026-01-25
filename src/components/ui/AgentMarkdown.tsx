@@ -150,7 +150,7 @@ const defaultComponents: any = {
   table: ({ className, ...props }: { className?: string }) => (
     <table
       className={cn(
-        "my-5 w-full border-separate border-spacing-0 overflow-y-auto border-zinc-800",
+        "my-5 w-full border-separate border-spacing-0 overflow-y-auto border-zinc-800 rounded-lg",
         className,
       )}
       {...props}
@@ -159,7 +159,7 @@ const defaultComponents: any = {
   th: ({ className, ...props }: { className?: string }) => (
     <th
       className={cn(
-        "bg-muted px-4 py-2 text-left font-bold first:rounded-tl-lg last:rounded-tr-lg [&[align=center]]:text-center [&[align=right]]:text-right",
+        "bg-muted px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
         className,
       )}
       {...props}
@@ -168,7 +168,7 @@ const defaultComponents: any = {
   td: ({ className, ...props }: { className?: string }) => (
     <td
       className={cn(
-        "border-b border-l px-4 py-2 text-left last:border-r [&[align=center]]:text-center [&[align=right]]:text-right",
+        "border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right",
         className,
       )}
       {...props}
@@ -177,7 +177,7 @@ const defaultComponents: any = {
   tr: ({ className, ...props }: { className?: string }) => (
     <tr
       className={cn(
-        "m-0 border-b p-0 first:border-t [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg",
+        "m-0 border p-0 first:border-t [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg",
         className,
       )}
       {...props}

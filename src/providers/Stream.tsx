@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useThread } from "./Thread";
+import { logger } from "@/utils/logger";
 
 export type StateType = {
   messages: Message[];
@@ -133,7 +134,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     onCustomEvent: (event, options) => {
       if (isUIMessage(event) || isRemoveUIMessage(event)) {
         options.mutate((prev) => {
-          // console.log("UI Event received in StreamProvider:", event);
+          logger.debug("UI Event received in StreamProvider:", event);
           const ui = uiMessageReducer(prev.ui ?? [], event);
           return { ...prev, ui };
         });
