@@ -1,6 +1,6 @@
 // Main components
 export { default as Sidebar } from "./pages/Sidebar/sidebar";
-
+export { Chat } from "./pages/Chat/Chat";
 // Providers
 export { ChatProvider } from "./providers/ChatProvider";
 export { ChatRuntimeProvider } from "./providers/ChatRuntime";
@@ -10,6 +10,7 @@ export { FileProvider } from "./providers/FileProvider";
 export { CustomComponentProvider } from "./providers/CustomComponentProvider";
 
 // Hooks
+export { default as useTools } from "./hooks/useTools";
 export { useThread } from "./providers/Thread";
 export { useStreamContext } from "./providers/Stream";
 export { useChatRuntime } from "./providers/ChatRuntime";
@@ -22,3 +23,4 @@ export type { ChatIdentity } from "./providers/ChatProvider";
 export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { FileInfo } from "./types/fileInput";
 export type { SuggestionsOptions } from "./providers/useChatSuggestions";
+export type { CustomTool } from "./types/CustomTools";
