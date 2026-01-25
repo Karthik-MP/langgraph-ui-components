@@ -11,7 +11,8 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-export default function Chat({ callThisOnSubmit, handleFileSelect, enableToolCallIndicator }: ChatUIProps) {
+export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
+    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator } = chatProps || {};
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
