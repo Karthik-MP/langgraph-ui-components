@@ -4,6 +4,7 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { LoadExternalComponent } from "@langchain/langgraph-sdk/react-ui";
 import { Fragment } from "react/jsx-runtime";
 import React from "react";
+import { logger } from "@/utils/logger";
 
 function CustomComponentRender({
   message,
@@ -17,8 +18,13 @@ function CustomComponentRender({
   
   // Memoize filtered components to prevent unnecessary re-renders
   const customComponents = React.useMemo(() => {
-    return values.ui?.filter((ui) => ui?.id === message.id);
+    return values.ui?.filter((ui) => 
+      ui?.metadata?.id === message.id || ui?.metadata?.message_id === message.id || ui?.id === message.id
+    );
   }, [values.ui, message.id]);
+
+  logger.debug("CustomComponentRender - customComponents:", message);
+  logger.debug("CustomComponentRender - available components:", values);
 
 
   if (!customComponents?.length) return null;
