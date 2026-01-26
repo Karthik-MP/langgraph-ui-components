@@ -36,7 +36,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
                         display_name: agent.display_name,
                     }));
                     setAgents(agentList);
-                    console.log("Loaded agents from catalog:", agentList);
+                    // console.log("Loaded agents from catalog:", agentList);
                 }
             } catch (error) {
                 console.error("Failed to load agent catalog:", error);
@@ -44,7 +44,8 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
         };
         
         loadCatalog();
-    }, [fetchCatalog]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
     const handleAgentChange = (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
         const selectedAgent = (event.target as HTMLElement).getAttribute("data-agent-id");

@@ -290,7 +290,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         { messages: [...allCurrentMessages, message] },
         {
           streamMode: options?.streamMode || ["values"],
-          streamSubgraphs: options?.streamSubgraphs ?? true,
+          streamSubgraphs: options?.streamSubgraphs ?? false, // Disable subgraph streaming to prevent duplicates
           streamResumable: options?.streamResumable ?? true,
           optimisticValues: (prev) => ({
             ...prev,
