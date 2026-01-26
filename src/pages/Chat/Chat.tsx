@@ -17,7 +17,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
     const [input, setInput] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const { fileInput, setFileInput } = useFileProvider();
-    const [agents, setAgents] = useState<Array<string>>([]);
+    const [agents, setAgents] = useState<Array<{agent_id: string; display_name: string}>>([]);
     const { fetchCatalog } = useStreamContext();
     const stream = useStreamContext();
     const { assistantId, setAssistantId } = useChatRuntime();
@@ -26,15 +26,33 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
 
     useEffect(() => {
         // Fetch the agent catalog on component mount
-        fetchCatalog();
-        setAgents(["V3ya_external_agent", "chat_agent"]);
+        const loadCatalog = async () => {
+            try {
+                const catalog = await fetchCatalog();
+                if (catalog && Array.isArray(catalog)) {
+                    // Extract agent_id and display_name from catalog
+                    const agentList = catalog.map((agent) => ({
+                        agent_id: agent.agent_id,
+                        display_name: agent.display_name,
+                    }));
+                    setAgents(agentList);
+                    console.log("Loaded agents from catalog:", agentList);
+                }
+            } catch (error) {
+                console.error("Failed to load agent catalog:", error);
+            }
+        };
+        
+        loadCatalog();
     }, [fetchCatalog]);
 
     const handleAgentChange = (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
-        const selectedAgent = (event.target as HTMLElement).innerText;
-        console.log("Selected agent:", selectedAgent);
-        setAssistantId(selectedAgent);
-        setIsDropdownOpen(false);
+        const selectedAgent = (event.target as HTMLElement).getAttribute("data-agent-id");
+        if (selectedAgent) {
+            console.log("Selected agent:", selectedAgent);
+            setAssistantId(selectedAgent);
+            setIsDropdownOpen(false);
+        }
     }
 
 
@@ -144,14 +162,14 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
                         type="button"
                     >
                         {assistantId}
-                        <svg className="w-4 h-4 ms-1.5 -me-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" /></svg>
+                        <svg className="w-4 h-4 ms-1.5 -me-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 9-7 7-7-7" /></svg>
                     </button>
 
                     <div id="dropdownDivider" className={`z-10 absolute top-14 bg-neutral-primary-medium bg-zinc-800 rounded-2xl  divide-y divide-default-medium w-44 ${isDropdownOpen ? '' : 'hidden'}`}>
                         <ul className="p-2 text-sm text-body font-medium" aria-labelledby="dropdownDividerButton">
-                            {agents.map((agentName) => (
-                                <li key={agentName} className="hover:bg-zinc-700 hover:rounded-2xl" onClick={handleAgentChange}>
-                                    <span className="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{agentName}</span>
+                            {agents.map((agent) => (
+                                <li key={agent.agent_id} className="hover:bg-zinc-700 hover:rounded-2xl" onClick={handleAgentChange} data-agent-id={agent.agent_id}>
+                                    <span className="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded" data-agent-id={agent.agent_id}>{agent.display_name}</span>
                                 </li>
                             ))}
                         </ul>

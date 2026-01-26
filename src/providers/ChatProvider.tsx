@@ -5,17 +5,9 @@ import { FileProvider } from "./FileProvider";
 import { StreamProvider } from "./Stream";
 import { ThreadProvider } from "./Thread";
 import { SuggestionProvider } from "./useChatSuggestions";
+import type { ChatIdentity } from "@/types/ChatIdentity";
+import { ToolsProvider } from "./ToolsProvider";
 
-/**
- * Identity information for authenticating and identifying the chat user.
- * Used for routing messages and maintaining user context in the chat system.
- */
-export interface ChatIdentity {
-  /** Unique identifier for the user */
-  user_id: string;
-  /** Organization identifier for multi-tenant applications */
-  org_id: string;
-}
 
 interface ChatProviderProps {
   /** Base URL for the LangGraph API endpoint */
@@ -63,9 +55,11 @@ export function ChatProvider({
         <ThreadProvider>
           <StreamProvider>
             <SuggestionProvider>
-              <CustomComponentProvider initialComponents={customComponents}>
-                <FileProvider>{children}</FileProvider>
-              </CustomComponentProvider>
+              <ToolsProvider>
+                <CustomComponentProvider initialComponents={customComponents}>
+                  <FileProvider>{children}</FileProvider>
+                </CustomComponentProvider>
+              </ToolsProvider>
             </SuggestionProvider>
           </StreamProvider>
         </ThreadProvider>

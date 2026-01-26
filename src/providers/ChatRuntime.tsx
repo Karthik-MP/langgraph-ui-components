@@ -1,20 +1,6 @@
 /* @refresh reset */
+import type { ChatIdentity } from "@/types/ChatIdentity";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-
-/**
- * Identity information for the chat runtime.
- * Supports authentication tokens and custom identity fields.
- */
-export type ChatIdentity = {
-  /** Optional bearer token for API authentication */
-  authToken?: string | null;
-  /** Optional user identifier */
-  user_id?: string | null;
-  /** Optional organization identifier */
-  org_id?: string | null;
-  /** Allow additional custom identity fields */
-  [key: string]: any;
-};
 
 /**
  * Context value containing core chat runtime configuration.

@@ -1,5 +1,5 @@
-import useTools from "@/hooks/useTools";
 import { useThread } from "@/providers/Thread";
+import { useTools } from "@/providers/ToolsProvider";
 import { getContentString } from "@/utils/utils";
 import type { Thread } from "@langchain/langgraph-sdk";
 import {
@@ -21,7 +21,7 @@ export default function ThreadHistory() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const { threads, getThreads, setThreadId, setThreads, setThreadsLoading } = useThread();
-    const { tool } = useTools();
+    const { tools } = useTools();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -68,7 +68,7 @@ export default function ThreadHistory() {
             {/* Primary actions */}
             <div className="flex flex-col gap-1 px-2 py-3">
 
-                {tool.map((t, index) => {
+                {tools.map((t, index) => {
                     // Override onClick for specific tools
                     let handleClick = t.onClick;
                     if (t.label === 'New chat') {

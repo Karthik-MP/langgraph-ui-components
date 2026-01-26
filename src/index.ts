@@ -8,9 +8,9 @@ export { ThreadProvider } from "./providers/Thread";
 export { StreamProvider } from "./providers/Stream";
 export { FileProvider } from "./providers/FileProvider";
 export { CustomComponentProvider } from "./providers/CustomComponentProvider";
+export { ToolsProvider, useTools } from "./providers/ToolsProvider";
 
 // Hooks
-export { default as useTools } from "./hooks/useTools";
 export { useThread } from "./providers/Thread";
 export { useStreamContext } from "./providers/Stream";
 export { useChatRuntime } from "./providers/ChatRuntime";
@@ -19,7 +19,7 @@ export { useCustomComponents } from "./providers/CustomComponentProvider";
 export { useChatSuggestions } from "./providers/useChatSuggestions";
 
 // Types
-export type { ChatIdentity } from "./providers/ChatProvider";
+export type { ChatIdentity } from "./types/ChatIdentity";
 export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { FileInfo } from "./types/fileInput";
 export type { SuggestionsOptions } from "./providers/useChatSuggestions";
