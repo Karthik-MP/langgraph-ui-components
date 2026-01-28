@@ -20,11 +20,13 @@ import ChatInput from "../../components/sidebar/ChatInput";
  * @param header - Custom header text for the chat sidebar (default: "AI Assistant")
  * @param handleFileSelect - Optional custom file selection handler
  * @param callThisOnSubmit - Optional callback invoked before message submission, can return updated file list
+ * @param preventSubmit - Optional boolean to prevent all submit actions when true
  * 
  * @example
  * ```tsx
  * <Sidebar 
  *   header="My Custom AI"
+ *   preventSubmit={true} // Disables all submit functionality
  *   callThisOnSubmit={async () => {
  *     // Upload files to your backend
  *     return updatedFiles;
@@ -34,7 +36,7 @@ import ChatInput from "../../components/sidebar/ChatInput";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const { fileInput, setFileInput } = useFileProvider();
@@ -51,7 +53,7 @@ export default function Sidebar(props: ChatSidebarProps) {
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
+    if (preventSubmit || (input.trim().length === 0 && fileInput.length === 0) || isLoading)
       return;
 
     // Call the custom upload and get the latest files
@@ -61,14 +63,27 @@ export default function Sidebar(props: ChatSidebarProps) {
       if (result && result.length > 0) latestFiles = result;
     }
 
-    const contentBlocks = [
-      ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-      ...latestFiles.map((file) => ({
-        type: "document" as const,
-        ...file,
-        cache_control: { type: "ephemeral" as const },
-      })),
-    ] as unknown as Message["content"];
+    // Create content blocks based on upload type
+    let contentBlocks: any;
+    if (s3_upload) {
+      // For S3 uploads, send text message
+      let messageText = input.trim();
+      if (latestFiles.length > 0) {
+        const fileNames = latestFiles.map(file => file.fileName).join(", ");
+        const fileText = `file${latestFiles.length > 1 ? 's' : ''} uploaded: ${fileNames}`;
+        messageText = messageText ? `${fileText}\n\n - ${messageText}` : fileText;
+      }
+      contentBlocks = [{ type: "text", text: messageText }];
+    } else {
+      contentBlocks = [
+        ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
+        ...latestFiles.map((file) => ({
+          type: "document" as const,
+          ...file,
+          cache_control: { type: "ephemeral" as const },
+        })),
+      ];
+    }
 
     const newHumanMessage: Message = {
       id: uuidv4(),
@@ -174,6 +189,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                     handleFileSelect={onFileSelect}
                     setFileInput={setFileInput}
                     onCancel={() => stream.stop?.()}
+                    filePreview={filePreview}
                   />
                 </div>
               </div>

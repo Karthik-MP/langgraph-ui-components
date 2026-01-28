@@ -1,10 +1,12 @@
 import type { FileInfo } from "@/types/fileInput";
-import { FileIcon, MoveUp, Paperclip, X } from "lucide-react";
+import { MoveUp, Paperclip, Loader2 } from "lucide-react";
 import {
   type ChangeEvent,
   type Dispatch,
   type FormEvent,
   type SetStateAction,
+  useState,
+  type DragEvent,
 } from "react";
 
 export default function ChatInput({
@@ -17,6 +19,7 @@ export default function ChatInput({
   handleFileSelect,
   isLoading = false,
   onCancel,
+  filePreview,
 }: {
   input: string;
   setInput: (value: string) => void;
@@ -27,49 +30,82 @@ export default function ChatInput({
   inputFileAccept?: string;
   isLoading?: boolean;
   onCancel?: () => void;
+  filePreview?: (files: FileInfo[], setFileInput: Dispatch<SetStateAction<FileInfo[]>>) => React.ReactNode;
 }) {
   const canSubmit =
     (input.trim().length > 0 || fileInput.length > 0) && !isLoading;
 
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const acceptedFiles = files.filter(file => {
+      if (!inputFileAccept) return true;
+      const acceptTypes = inputFileAccept.split(',').map(type => type.trim());
+      return acceptTypes.some(type => {
+        if (type.startsWith('.')) {
+          return file.name.toLowerCase().endsWith(type.toLowerCase());
+        }
+        return file.type.match(type.replace('*', '.*'));
+      });
+    });
+
+    if (acceptedFiles.length === 0) return;
+
+    const fileDetails: FileInfo[] = await Promise.all(
+      acceptedFiles.map(async (file) => {
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]); 
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        return {
+          fileName: file.name,
+          fileType: file.type,
+          file: file,
+          fileData: base64Data,
+        };
+      })
+    );
+
+    setFileInput((prevFile) => [...prevFile, ...fileDetails]);
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative flex flex-col gap-2 border rounded-xl m-2 bg-zinc-900 border-zinc-800"
+      className={`relative flex flex-col gap-2 border rounded-xl m-2 bg-zinc-900 border-zinc-800 transition-colors ${
+        isDragOver ? 'border-blue-500 bg-zinc-800' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {/* File attachments preview */}
-      {fileInput.length > 0 && (
-        <div className="flex-1 flex-col gap-2 p-2 bg-zinc-900 border-b border-zinc-700 max-h-48 thread-scrollbar">
-          {fileInput.map((file, index) => (
-            <div
-              key={`file-${index}-${file.fileName}`}
-              className="flex items-center justify-between gap-3 bg-zinc-800 p-2 rounded group hover:bg-zinc-700 transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <FileIcon className="text-blue-400 shrink-0" size={20} />
-                <div className="flex flex-col min-w-0 overflow-hidden">
-                  <span className="text-xs font-medium text-zinc-200 truncate">
-                    {file.fileName}
-                  </span>
-                  <span className="text-[10px] text-zinc-500 truncate">
-                    {file.fileType || "Unknown file type"}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setFileInput((prev) => prev.filter((_, i) => i !== index))
-                }
-                className="shrink-0 p-1 rounded hover:bg-zinc-600 transition-colors"
-                aria-label="Remove file"
-              >
-                <X size={16} className="text-red-400" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      {filePreview && filePreview(fileInput, setFileInput)}
 
       {/* Text input */}
       <textarea
@@ -140,7 +176,11 @@ export default function ChatInput({
             className="focus:outline-none transition-all bg-zinc-300 border rounded-full p-1 cursor-pointer"
             style={{ border: "none" }}
           >
-            <MoveUp size={24} className="text-black p-1" />
+            {isLoading ? (
+              <Loader2 size={24} className="animate-spin text-black p-1" />
+            ) : (
+              <MoveUp size={24} className="text-black p-1" />
+            )}
           </button>
         </div>
       </div>
