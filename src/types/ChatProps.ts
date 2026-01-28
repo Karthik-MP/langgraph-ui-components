@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { FormEvent, Dispatch, SetStateAction } from "react";
 import type { FileInfo } from "./fileInput";
 
 interface headerProps {
@@ -15,7 +15,9 @@ interface ChatProps {
 }
 
 export interface ChatSidebarProps extends ChatProps {
-
+    filePreview?: (files: FileInfo[], setFileInput: Dispatch<SetStateAction<FileInfo[]>>) => React.ReactNode;
+    s3_upload?: boolean;
+    preventSubmit?: boolean;
 }
 
 export interface ChatUIProps extends ChatProps {
