@@ -10,7 +10,6 @@ import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
 import { CustomComponentProvider } from "./providers/CustomComponentProvider";
 import { SuggestionProvider } from "./providers/useChatSuggestions";
-import Chat from "./pages/Chat/Chat";
 
 function App() {
   const [identity] = useState<ChatIdentity>({
