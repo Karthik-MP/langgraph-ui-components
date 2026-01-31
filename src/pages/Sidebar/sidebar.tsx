@@ -6,7 +6,7 @@ import type { ChatSidebarProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, ChevronLeft } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
@@ -21,6 +21,9 @@ import ChatInput from "../../components/sidebar/ChatInput";
  * @param handleFileSelect - Optional custom file selection handler
  * @param callThisOnSubmit - Optional callback invoked before message submission, can return updated file list
  * @param preventSubmit - Optional boolean to prevent all submit actions when true
+ * @param leftPanelContent - Optional custom content for the left panel when expanded
+ * @param leftPanelOpen - Optional external control for left panel open state
+ * @param setLeftPanelOpen - Optional external setter for left panel open state
  * 
  * @example
  * ```tsx
@@ -31,15 +34,22 @@ import ChatInput from "../../components/sidebar/ChatInput";
  *     // Upload files to your backend
  *     return updatedFiles;
  *   }}
+ *   leftPanelContent={<div className="text-white">Custom left panel content here!</div>}
+ *   leftPanelOpen={isLeftPanelOpen}
+ *   setLeftPanelOpen={setIsLeftPanelOpen}
  * />
  * ```
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
   const { fileInput, setFileInput } = useFileProvider();
+
+  const leftPanelOpen = externalLeftPanelOpen !== undefined ? externalLeftPanelOpen : internalLeftPanelOpen;
+  const setLeftPanelOpen = externalSetLeftPanelOpen || setInternalLeftPanelOpen;
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
@@ -70,7 +80,7 @@ export default function Sidebar(props: ChatSidebarProps) {
       let messageText = input.trim();
       if (latestFiles.length > 0) {
         const fileNames = latestFiles.map(file => file.fileName).join(", ");
-        const fileText = `file${latestFiles.length > 1 ? 's' : ''} uploaded: ${fileNames}`;
+        const fileText = `${fileNames} uploaded`;
         messageText = messageText ? `${fileText}\n\n - ${messageText}` : fileText;
       }
       contentBlocks = [{ type: "text", text: messageText }];
@@ -121,7 +131,7 @@ export default function Sidebar(props: ChatSidebarProps) {
           fileName: file.name,
           fileType: file.type,
           file: file,
-          fileData: base64Data, // Add this to your FileInfo type
+          fileData: base64Data,
         };
       })
     );
@@ -130,7 +140,6 @@ export default function Sidebar(props: ChatSidebarProps) {
   };
 
   const onFileSelect = handleFileSelect || defaultHandleFileSelect;
-  
   return (
     <>
       <AnimatePresence>
@@ -153,11 +162,28 @@ export default function Sidebar(props: ChatSidebarProps) {
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 260, damping: 30 }}
             >
+              <AnimatePresence>
+                {leftPanelOpen && (
+                  <motion.div
+                    className="fixed right-[520px] top-0 h-full w-[520px]"
+                    initial={{ x: "30%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "30%" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 40 }}
+                  >
+                      {leftPanelContent || (
+                        <>
+                          <h3 className="text-lg font-semibold mb-4 text-white">Left Panel</h3>
+                          <p className="text-zinc-300">This is the left extension panel. You can add any content here.</p>
+                        </>
+                      )}                
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="flex h-full flex-col">
                 <div className="flex border-b border-zinc-800 py-4 px-6 justify-between items-center">
                   <div className="flex items-center gap-3">
                     {header?.logoUrl && (
-                      // Render provided logo image if present
                       <img
                         src={header?.logoUrl}
                         alt={header?.title ? `${header.title} logo` : "AI Assistant logo"}
@@ -165,13 +191,22 @@ export default function Sidebar(props: ChatSidebarProps) {
                       />
                     )}
                     <div className="text-start text-2xl font-bold">{header?.title || "AI Assistant"}</div>
+                    
                   </div>
                   <X
                     className="text-zinc-400 cursor-pointer"
                     onClick={() => setOpen(false)}
                   />
                 </div>
-
+                {/* Vertically centered left panel toggle */}
+                {leftPanelContent && (
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10">
+                    <ChevronLeft 
+                      className={`cursor-pointer transition-transform ${leftPanelOpen ? 'rotate-180' : ''}`}
+                      onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+                    />
+                  </div>
+                )}
                 <div className="flex-1 overflow-auto scrollbar-none">
                   <div className="p-4">
                     <ChatBody enableToolCallIndicator={enableToolCallIndicator} />

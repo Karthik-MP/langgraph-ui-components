@@ -67,7 +67,7 @@ export default function ChatInput({
         return file.type.match(type.replace('*', '.*'));
       });
     });
-
+    
     if (acceptedFiles.length === 0) return;
 
     const fileDetails: FileInfo[] = await Promise.all(
