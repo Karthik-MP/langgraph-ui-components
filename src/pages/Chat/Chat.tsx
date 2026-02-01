@@ -7,9 +7,7 @@ import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
 import type { ChatUIProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
-import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
-import { v4 as uuidv4 } from "uuid";
 
 export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
     const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator } = chatProps || {};
@@ -58,34 +56,9 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
         if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
             return;
 
-        // console.log("Submitting with input:", input);
-
-        // Call the custom upload and get the latest files
-        let latestFiles: FileInfo[] = fileInput;
         if (callThisOnSubmit) {
-            const result = await callThisOnSubmit();
-            if (result && result.length > 0) latestFiles = result;
+            await callThisOnSubmit();
         }
-
-        // console.log("Using files for submission:", latestFiles);
-
-        const contentBlocks = [
-            ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-            ...latestFiles.map((file) => ({
-                type: "document" as const,
-                ...file,
-                cache_control: { type: "ephemeral" as const },
-            })),
-        ] as unknown as Message["content"];
-
-        const newHumanMessage: Message = {
-            id: uuidv4(),
-            type: "human",
-            content: contentBlocks,
-        };
-
-        // Use the unified submitMessage function
-        await stream.submitMessage(newHumanMessage);
 
         setIsFirstMessage(false);
         setInput("");
@@ -98,14 +71,13 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
         const files = event.target.files;
         if (!files) return;
 
-        // Convert files to base64 for sending
         const fileDetails: FileInfo[] = await Promise.all(
             Array.from(files).map(async (file) => {
                 const base64Data = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = () => {
                         const result = reader.result as string;
-                        resolve(result.split(",")[1]); // Remove data:...;base64, prefix
+                        resolve(result.split(",")[1]); 
                     };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
