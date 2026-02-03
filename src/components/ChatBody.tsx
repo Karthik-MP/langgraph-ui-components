@@ -1,10 +1,11 @@
 import { useStreamContext } from "@/providers/Stream";
 import { logger } from "@/utils/logger";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
+import type { MessageFeedback } from "./messages/MessageActions";
 import Thinking from "./Thinking";
 import ToolCallFunctions from "./ToolCallFunctions";
 
@@ -12,6 +13,9 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
   const stream = useStreamContext();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
+
+  // State to track message feedback (likes/dislikes)
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedback>>({});
 
   logger.debug("ChatBody render - messages count:", messages, "isLoading:", isLoading);
 
@@ -21,6 +25,36 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
   const containerRef = useRef<HTMLDivElement | null>(null);
   const prevMessageCountRef = useRef(0);
   const shouldAutoScrollRef = useRef(true);
+
+  // Handler for message feedback
+  const handleFeedback = useCallback((messageId: string, feedback: MessageFeedback) => {
+    setMessageFeedback(prev => ({
+      ...prev,
+      [messageId]: feedback,
+    }));
+  }, []);
+
+  // Handler for message regeneration
+  const handleRegenerate = useCallback(async (
+    parentCheckpoint: any | null | undefined,
+  ) => {
+    if (!parentCheckpoint) {
+      console.error("No parent checkpoint available for regeneration");
+      return;
+    }
+    
+    await stream.submit(undefined, {
+      checkpoint: parentCheckpoint,
+      streamMode: ["values"],
+      streamSubgraphs: true,
+      streamResumable: true,
+    });
+  }, [stream]);
+
+  // Handler for selecting a different branch
+  const handleBranchSelect = useCallback((branch: string) => {
+    stream.setBranch(branch);
+  }, [stream]);
 
   // Get the parent scroll container
   const getScrollContainer = useCallback(() => {
@@ -121,6 +155,10 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
       content: combinedContent,
     };
 
+    // Get branch metadata from thread
+    const meta = msg ? stream.getMessagesMetadata(msg) : undefined;
+    const displayContent = combinedContent;
+
     const isLastMessageGroup = nextIndex >= messagesArray.length;
     const isStreamingThisMessage = isLoading && isLastMessageGroup;
 
@@ -128,7 +166,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
     const hasToolCalls = isAiWithToolCalls(msg);
 
     // Show thinking if streaming and no content yet (only tool calls exist)
-    const showThinkingIndicator = isStreamingThisMessage && !combinedContent && hasToolCalls;
+    const showThinkingIndicator = isStreamingThisMessage && !displayContent && hasToolCalls;
 
     return (
       <React.Fragment key={msgKey}>
@@ -143,10 +181,16 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
           />
         )}
         {/* 2. Agent message (combined content) */}
-        {combinedContent && (
+        {displayContent && (
           <AgentMessage
-            message={combinedMessage}
+            message={{ ...combinedMessage, content: displayContent }}
             isStreaming={isStreamingThisMessage}
+            onRegenerate={handleRegenerate}
+            feedback={msg.id ? messageFeedback[msg.id] : undefined}
+            onFeedback={handleFeedback}
+            branch={meta?.branch}
+            branchOptions={meta?.branchOptions}
+            onBranchSelect={handleBranchSelect}
           />
         )}
         {/* 3. Custom component (from all messages in the group) */}
@@ -155,7 +199,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
         ))}
       </React.Fragment>
     );
-  }, [isLoading, stream, enableToolCallIndicator]);
+  }, [isLoading, stream, enableToolCallIndicator, handleRegenerate, messageFeedback, handleFeedback, handleBranchSelect]);
 
   // Memoize the rendered messages array
   const renderedMessages = useMemo(() => {

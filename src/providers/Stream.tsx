@@ -81,6 +81,7 @@ type StreamContextType = UseStream<StateType, {
       config?: any;
     }
   ) => Promise<void>;
+  regenerateMessage: (messageId: string) => Promise<void>;
   fetchCatalog: () => Promise<any | null>;
 };
 
@@ -114,14 +115,21 @@ async function fetchCatalog(apiUrl: string, authToken: string | null | undefined
   }
 }
 
+async function sleep(ms = 6000) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const StreamSession = ({ children }: { children: ReactNode }) => {
   const { apiUrl, assistantId, identity } = useChatRuntime();
-  const { mode, threadId, setThreadId, configuration } = useThread();
+  const { mode, threadId, setThreadId, getThreads, setThreads, configuration } = useThread();
 
   // Store local-only AI messages that shouldn't trigger backend calls
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   // Store local-only UI components
   const [localUI, setLocalUI] = useState<UIMessage[]>([]);
+  // Track if catalog has been fetched to prevent duplicate calls
+  const [catalogFetched, setCatalogFetched] = useState(false);
+  const [catalogCache, setCatalogCache] = useState<any | null>(null);
 
   const streamValue = useTypedStream({
     apiUrl,
@@ -149,6 +157,9 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       } else {
         // switch freely
         setThreadId(id);
+        // Refetch threads list when thread ID changes.
+        // Wait for some seconds before fetching so we're able to get the new thread that was created.
+        sleep().then(() => getThreads().then(setThreads).catch(console.error));
       }
     },
   });
@@ -310,6 +321,73 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     [streamValue, identity, configuration, combinedMessages]
   );
 
+  /**
+   * Regenerate an AI response by finding the last human message before the specified AI message
+   * and resubmitting from that point
+   */
+  const regenerateMessage = useCallback(
+    async (messageId: string) => {
+      const allMessages = combinedMessages || [];
+      const messageIndex = allMessages.findIndex((msg) => msg.id === messageId);
+      
+      if (messageIndex === -1) {
+        console.error("Message not found:", messageId);
+        return;
+      }
+
+      // Find the last human message before this AI message
+      let lastHumanIndex = messageIndex - 1;
+      while (lastHumanIndex >= 0 && allMessages[lastHumanIndex].type !== "human") {
+        lastHumanIndex--;
+      }
+
+      if (lastHumanIndex === -1) {
+        console.error("No human message found before AI message");
+        return;
+      }
+
+      // Get all messages up to and including the last human message
+      const messagesToKeep = allMessages.slice(0, lastHumanIndex + 1);
+      
+      // Remove the last human message from the list since we'll resubmit it
+      const messagesBeforeHuman = messagesToKeep.slice(0, -1);
+      const humanMessage = messagesToKeep[messagesToKeep.length - 1];
+
+      // Clear local messages that came after the human message
+      setLocalMessages((prev) => 
+        prev.filter((msg) => {
+          const msgIndex = allMessages.findIndex((m) => m.id === msg.id);
+          return msgIndex < lastHumanIndex;
+        })
+      );
+
+      // Clear local UI that came after the human message  
+      setLocalUI((prev) =>
+        prev.filter((ui) => {
+          const msgIndex = allMessages.findIndex((m) => m.id === ui.id);
+          return msgIndex < lastHumanIndex;
+        })
+      );
+
+      // Resubmit from the human message
+      await streamValue.submit(
+        { messages: [...messagesBeforeHuman, humanMessage] },
+        {
+          streamMode: ["values"],
+          streamSubgraphs: true,
+          streamResumable: true,
+          config: {
+            configurable: {
+              ...identity,
+              ...configuration,
+            },
+          },
+        }
+      );
+    },
+    [combinedMessages, streamValue, identity, configuration, setLocalMessages, setLocalUI]
+  );
+
   useEffect(() => {
     checkGraphStatus(apiUrl, identity?.authToken).then((ok) => {
       if (!ok) {
@@ -321,6 +399,24 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     });
   }, [apiUrl, identity?.authToken]);
 
+  // Memoize fetchCatalog to prevent unnecessary re-renders and implement caching
+  const fetchCatalogMemoized = useCallback(async () => {
+    // Return cached data if already fetched
+    if (catalogFetched && catalogCache !== null) {
+      return catalogCache;
+    }
+    
+    // Fetch catalog only once
+    if (!catalogFetched) {
+      setCatalogFetched(true);
+      const data = await fetchCatalog(apiUrl, identity?.authToken);
+      setCatalogCache(data);
+      return data;
+    }
+    
+    return catalogCache;
+  }, [apiUrl, identity?.authToken, catalogFetched, catalogCache]);
+
   const value = useMemo(
     () => ({
       ...streamValue,
@@ -331,9 +427,10 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       },
       sendMessage,
       submitMessage,
-      fetchCatalog: () => fetchCatalog(apiUrl, identity?.authToken),
+      regenerateMessage,
+      fetchCatalog: fetchCatalogMemoized,
     }),
-    [streamValue, combinedMessages, combinedUI, sendMessage, submitMessage]
+    [streamValue, combinedMessages, combinedUI, sendMessage, submitMessage, regenerateMessage, fetchCatalogMemoized]
   );
 
   return (
