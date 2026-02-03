@@ -1,3 +1,20 @@
+// Import for default export
+import { default as Sidebar } from "./pages/Sidebar/sidebar";
+import { Chat } from "./pages/Chat/Chat";
+import { ChatProvider } from "./providers/ChatProvider";
+import { ChatRuntimeProvider } from "./providers/ChatRuntime";
+import { ThreadProvider } from "./providers/Thread";
+import { StreamProvider } from "./providers/Stream";
+import { FileProvider } from "./providers/FileProvider";
+import { CustomComponentProvider } from "./providers/CustomComponentProvider";
+import useTools from "./hooks/useTools";
+import { useThread } from "./providers/Thread";
+import { useStreamContext } from "./providers/Stream";
+import { useChatRuntime } from "./providers/ChatRuntime";
+import { useFileProvider } from "./providers/FileProvider";
+import { useCustomComponents } from "./providers/CustomComponentProvider";
+import { useChatSuggestions } from "./providers/useChatSuggestions";
+
 // Main components
 export { default as Sidebar } from "./pages/Sidebar/sidebar";
 export { Chat } from "./pages/Chat/Chat";
@@ -24,3 +41,22 @@ export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { FileInfo } from "./types/fileInput";
 export type { SuggestionsOptions } from "./providers/useChatSuggestions";
 export type { CustomTool } from "./types/CustomTools";
+
+// Default export for compatibility
+export default {
+  Sidebar,
+  Chat,
+  ChatProvider,
+  ChatRuntimeProvider,
+  ThreadProvider,
+  StreamProvider,
+  FileProvider,
+  CustomComponentProvider,
+  useTools,
+  useThread,
+  useStreamContext,
+  useChatRuntime,
+  useFileProvider,
+  useCustomComponents,
+  useChatSuggestions,
+};
