@@ -53,7 +53,6 @@ type StreamContextType = UseStream<StateType, {
       /** If true, message is meant for agent only (not user-visible) */
       type?: Message["type"];
       /** Additional config to pass to the agent */
-      config?: any;
       /** Name field required for function/tool messages */
       name?: string;
       /** If true, message is hidden from user UI */
@@ -70,6 +69,8 @@ type StreamContextType = UseStream<StateType, {
       ui?: UIMessage[];
       /** Custom ID for the message (will also be used for UI components) */
       id?: string;
+      /** Custom context to override/merge with identity */
+      context?: Record<string, any>;
     }
   ) => Promise<void>;
   submitMessage: (
@@ -78,7 +79,6 @@ type StreamContextType = UseStream<StateType, {
       streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
       streamSubgraphs?: boolean;
       streamResumable?: boolean;
-      config?: any;
     }
   ) => Promise<void>;
   regenerateMessage: (messageId: string) => Promise<void>;
@@ -174,7 +174,6 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       message: Message | string,
       options?: {
         type?: Message["type"];
-        config?: any;
         name?: string;
         hidden?: boolean;
         tool_calls?: any[];
@@ -183,6 +182,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         additional_kwargs?: Record<string, unknown>;
         ui?: UIMessage[];
         id?: string; // Allow passing custom ID
+        context?: Record<string, any>; // Allow passing custom context to override identity
       }
     ) => {
       // Use provided ID or generate new one
@@ -240,18 +240,15 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
 
       // For non-AI messages, submit to the agent
       const currentMessages = streamValue.messages || [];
+      // Merge identity with custom context, custom context takes precedence
+      const mergedContext = options?.context 
+        ? { ...identity, ...options.context }
+        : identity || {};
+      
       await streamValue.submit(
         { messages: [...currentMessages, messageObj] }, 
         {
-          context: identity || {}, 
-          config: {
-            ...options?.config,
-            configurable: {
-              ...identity,
-              ...configuration,
-              ...(options?.config?.configurable ?? {}),
-            },
-          },
+          context: mergedContext, 
         }
       );
     },
@@ -309,14 +306,6 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
             ...prev,
             messages: [...allCurrentMessages, message],
           }),
-          config: {
-            ...options?.config,
-            configurable: {
-              ...identity,
-              ...configuration,
-              ...(options?.config?.configurable ?? {}),
-            },
-          },
         }
       );
     },
@@ -378,12 +367,6 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
           streamMode: ["values"],
           streamSubgraphs: true,
           streamResumable: true,
-          config: {
-            configurable: {
-              ...identity,
-              ...configuration,
-            },
-          },
         }
       );
     },
@@ -401,7 +384,6 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     });
   }, [apiUrl, identity?.authToken]);
 
-  // Memoize fetchCatalog to prevent unnecessary re-renders and implement caching
   const fetchCatalogMemoized = useCallback(async () => {
     // Return cached data if already fetched
     if (catalogFetched && catalogCache !== null) {
