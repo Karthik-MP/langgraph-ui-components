@@ -241,8 +241,9 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       // For non-AI messages, submit to the agent
       const currentMessages = streamValue.messages || [];
       await streamValue.submit(
-        { messages: [...currentMessages, messageObj] }, // Append to existing messages
+        { messages: [...currentMessages, messageObj] }, 
         {
+          context: identity || {}, 
           config: {
             ...options?.config,
             configurable: {
@@ -300,6 +301,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       await streamValue.submit(
         { messages: [...allCurrentMessages, message] },
         {
+          context: identity || {},
           streamMode: options?.streamMode || ["values"],
           streamSubgraphs: options?.streamSubgraphs ?? true,
           streamResumable: options?.streamResumable ?? true,
