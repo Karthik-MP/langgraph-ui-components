@@ -1,7 +1,7 @@
 import type { FormEvent, Dispatch, SetStateAction } from "react";
 import type { FileInfo } from "./fileInput";
 
-interface headerProps {
+export interface headerProps {
     title?: string;
     logoUrl?: string;
 }
