@@ -7,7 +7,9 @@ import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
 import type { ChatUIProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
+import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
     const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator } = chatProps || {};
@@ -52,13 +54,34 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
 
     const defaultHandleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-
         if ((input.trim().length === 0 && fileInput.length === 0) || isLoading)
             return;
 
+        let latestFiles: FileInfo[] = fileInput;
         if (callThisOnSubmit) {
-            await callThisOnSubmit();
+            const result = await callThisOnSubmit();
+            if (result && result.length > 0) latestFiles = result;
         }
+
+        // console.log("Using files for submission:", latestFiles);
+
+        const contentBlocks = [
+            ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
+            ...latestFiles.map((file) => ({
+                type: "document" as const,
+                ...file,
+                cache_control: { type: "ephemeral" as const },
+            })),
+        ] as unknown as Message["content"];
+
+        const newHumanMessage: Message = {
+            id: uuidv4(),
+            type: "human",
+            content: contentBlocks,
+        };
+
+        // Use the unified submitMessage function
+        await stream.submitMessage(newHumanMessage);
 
         setIsFirstMessage(false);
         setInput("");
@@ -99,7 +122,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
 
     return (
         <div className="flex h-screen w-screen bg-[#0f0f0f] text-white">
-            <ThreadHistory />
+            <ThreadHistory header={chatProps?.header || { title: "AI Assistant" }} />
             <main className="flex flex-1 flex-col">
                 {/* Header */}
                 <header className="flex h-14 items-center justify-between border-b border-white/10 px-6">
@@ -116,7 +139,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
                         type="button"
                     >
                         {assistantId}
-                        <svg className="w-4 h-4 ms-1.5 -me-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" /></svg>
+                        <svg className="w-4 h-4 ms-1.5 -me-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 9-7 7-7-7" /></svg>
                     </button>
 
                     <div id="dropdownDivider" className={`z-10 absolute top-14 bg-neutral-primary-medium bg-zinc-800 rounded-2xl  divide-y divide-default-medium w-44 ${isDropdownOpen ? '' : 'hidden'}`}>

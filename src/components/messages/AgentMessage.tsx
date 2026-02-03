@@ -3,18 +3,32 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { BotMessageSquare, Loader2 } from "lucide-react";
 import React from "react";
 import { AgentMarkdown } from "../ui/AgentMarkdown";
+import { MessageActions, type MessageFeedback } from "./MessageActions";
+import { BranchSwitcher } from "./BranchSwitcher";
 
 function AgentMessage({
   message,
   isStreaming = false,
+  onRegenerate,
+  feedback,
+  onFeedback,
+  branch,
+  branchOptions,
+  onBranchSelect,
 }: {
   message: Message;
   isStreaming?: boolean;
+  onRegenerate?: (parentCheckpoint: any | null | undefined, messageId: string, currentMessage: any) => void;
+  feedback?: MessageFeedback;
+  onFeedback?: (messageId: string, feedback: MessageFeedback) => void;
+  branch?: string;
+  branchOptions?: string[];
+  onBranchSelect?: (branch: string) => void;
 }) {
   const content = getContentString(message?.content);
 
   return (
-    <div className="flex items-start gap-3 w-full">
+    <div className="flex items-start gap-3 w-full group">
       <div
         className="rounded-full size-8 shrink-0 bg-zinc-800 border border-zinc-700 flex items-center justify-center p-2"
         data-alt="AI Avatar"
@@ -37,6 +51,27 @@ function AgentMessage({
             </>
           )}
         </div>
+        
+        {/* Branch switcher - show when multiple branches exist */}
+        {!isStreaming && branch && branchOptions && onBranchSelect && branchOptions.length > 1 && (
+          <BranchSwitcher
+            branch={branch}
+            branchOptions={branchOptions}
+            onSelect={onBranchSelect}
+            isLoading={isStreaming}
+          />
+        )}
+        
+        {/* Show actions only when not streaming and content exists */}
+        {!isStreaming && content && (
+          <MessageActions
+            message={message}
+            onRegenerate={onRegenerate}
+            feedback={feedback}
+            onFeedback={onFeedback}
+            className="ml-1"
+          />
+        )}
       </div>
     </div>
   );
@@ -49,9 +84,15 @@ export default React.memo(AgentMessage, (prevProps, nextProps) => {
     return false; // Always re-render when streaming
   }
 
-  // Otherwise, only re-render if the message ID changed
+  // Otherwise, only re-render if the message ID, feedback, branch, or callbacks changed
   return (
     prevProps.message.id === nextProps.message.id &&
-    prevProps.isStreaming === nextProps.isStreaming
+    prevProps.isStreaming === nextProps.isStreaming &&
+    prevProps.feedback === nextProps.feedback &&
+    prevProps.onRegenerate === nextProps.onRegenerate &&
+    prevProps.onFeedback === nextProps.onFeedback &&
+    prevProps.branch === nextProps.branch &&
+    prevProps.branchOptions?.length === nextProps.branchOptions?.length &&
+    prevProps.onBranchSelect === nextProps.onBranchSelect
   );
 });
