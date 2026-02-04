@@ -12,11 +12,11 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-// type ThreadHeaderProp = {
-//     header?: string
-// }
+type ThreadHeaderProp = {
+    header?: { title?: string }
+}
 
-export default function ThreadHistory() {
+export default function ThreadHistory({ header }: ThreadHeaderProp) {
     const [collapsed, setCollapsed] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -57,9 +57,11 @@ export default function ThreadHistory() {
             className={`flex h-full flex-col border-r border-white/10 bg-zinc transition-all duration-300 ease-in-out ${collapsed ? "w-14" : "w-64"}`}>
             {/* Top */}
             <div className="flex h-14 items-center mx-2 border-b border-white/10">
-                {/* <div className="flex mx-auto gap-2">
-                    {header}
-                </div> */}
+                {!collapsed && header && (
+                    <div className="flex gap-2 text-white/70 text-sm font-medium">
+                        {header.title}
+                    </div>
+                )}
                 <div className="flex ml-auto cursor-pointer p-2 hover:bg-white/10 rounded-md">
                     <PanelLeft className="h-5 w-5 text-white/70" onClick={() => setCollapsed(v => !v)} />
                 </div>
