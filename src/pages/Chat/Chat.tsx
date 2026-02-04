@@ -126,11 +126,6 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
             <main className="flex flex-1 flex-col">
                 {/* Header */}
                 <header className="flex h-14 items-center justify-between border-b border-white/10 px-6">
-                    {/* <span className="text-sm text-white/80">ChatGPT 5.2s</span> */}
-                    {/* <div className="flex gap-2">
-                        <div className="h-8 w-8 rounded-full bg-white/10" />
-                        <div className="h-8 w-8 rounded-full bg-white/10" />
-                    </div> */}
 
                     <button
                         id="dropdownDividerButton"
