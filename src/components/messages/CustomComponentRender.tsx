@@ -18,7 +18,7 @@ function CustomComponentRender({
   
   // Memoize filtered components to prevent unnecessary re-renders
   const customComponents = React.useMemo(() => {
-    return values.ui?.filter((ui) => 
+    return values.ui?.filter((ui) =>
       ui?.metadata?.id === message.id || ui?.metadata?.message_id === message.id || ui?.id === message.id
     );
   }, [values.ui, message.id]);
@@ -33,15 +33,20 @@ function CustomComponentRender({
     <Fragment>
       {customComponents
         ?.filter((c) => !!components?.[c.name as keyof typeof components])
-        .map((customComponent, index) => (
-          <LoadExternalComponent
-            key={(customComponent as any)._key || `${message.id}-${customComponent.id || index}`}
-            stream={thread}
-            message={customComponent}
-            components={components}
-            meta={{ ui: customComponent }}
-          />
-        ))}
+        .map((customComponent, index) => {
+          // Extract props from the UI message to pass to the component
+          const componentProps = (customComponent as any).props || {};
+
+          return (
+            <LoadExternalComponent
+              key={(customComponent as any)._key || `${message.id}-${customComponent.id || index}`}
+              stream={thread}
+              message={customComponent}
+              components={components}
+              meta={{ ...componentProps, ui: customComponent }}
+            />
+          );
+        })}
     </Fragment>
   );
 }
