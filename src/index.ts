@@ -41,22 +41,3 @@ export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { FileInfo } from "./types/fileInput";
 export type { SuggestionsOptions } from "./providers/useChatSuggestions";
 export type { CustomTool } from "./types/CustomTools";
-
-// Default export for compatibility
-export default {
-  Sidebar,
-  Chat,
-  ChatProvider,
-  ChatRuntimeProvider,
-  ThreadProvider,
-  StreamProvider,
-  FileProvider,
-  CustomComponentProvider,
-  useTools,
-  useThread,
-  useStreamContext,
-  useChatRuntime,
-  useFileProvider,
-  useCustomComponents,
-  useChatSuggestions,
-};
