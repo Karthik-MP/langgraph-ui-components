@@ -122,7 +122,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
 
     return (
         <div className="flex h-screen w-screen bg-[#0f0f0f] text-white">
-            <ThreadHistory />
+            <ThreadHistory header={chatProps?.header || { title: "AI Assistant" }} />
             <main className="flex flex-1 flex-col">
                 {/* Header */}
                 <header className="flex h-14 items-center justify-between border-b border-white/10 px-6">
