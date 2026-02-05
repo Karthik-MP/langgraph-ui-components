@@ -68,42 +68,45 @@ export default function Sidebar(props: ChatSidebarProps) {
 
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
+    let skipSubmitMessage = false;
+
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
-      if (result && result.length > 0) latestFiles = result;
-    }
-
-    // Create content blocks based on upload type
-    let contentBlocks: any;
-    if (s3_upload) {
-      // For S3 uploads, send text message
-      let messageText = input.trim();
-      if (latestFiles.length > 0) {
-        const fileNames = latestFiles.map(file => file.fileName).join(", ");
-        const fileText = `${fileNames} uploaded`;
-        messageText = messageText ? `${fileText}\n\n - ${messageText}` : fileText;
+      if (result && result.length > 0) {
+        latestFiles = result;
+        skipSubmitMessage = true;
       }
-      contentBlocks = [{ type: "text", text: messageText }];
-    } else {
-      contentBlocks = [
-        ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-        ...latestFiles.map((file) => ({
-          type: "document" as const,
-          ...file,
-          cache_control: { type: "ephemeral" as const },
-        })),
-      ];
     }
 
-    const newHumanMessage: Message = {
-      id: uuidv4(),
-      type: "human",
-      content: contentBlocks,
-    };
+    if (!skipSubmitMessage && (input.trim().length > 0 || latestFiles.length > 0)) {
+      let contentBlocks: any;
+      if (s3_upload) {
+        let messageText = input.trim();
+        if (latestFiles.length > 0) {
+          const fileNames = latestFiles.map(file => file.fileName).join(", ");
+          const fileText = `${fileNames} uploaded`;
+          messageText = messageText ? `${fileText}\n\n - ${messageText}` : fileText;
+        }
+        contentBlocks = [{ type: "text", text: messageText }];
+      } else {
+        contentBlocks = [
+          ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
+          ...latestFiles.map((file) => ({
+            type: "document" as const,
+            ...file,
+            cache_control: { type: "ephemeral" as const },
+          })),
+        ];
+      }
 
-    // Use the unified submitMessage function
-    await stream.submitMessage(newHumanMessage);
+      const newHumanMessage: Message = {
+        id: uuidv4(),
+        type: "human",
+        content: contentBlocks,
+      };
 
+      await stream.submitMessage(newHumanMessage);
+    }
     setInput("");
     setFileInput([]);
   };
@@ -171,12 +174,12 @@ export default function Sidebar(props: ChatSidebarProps) {
                     exit={{ x: "30%" }}
                     transition={{ type: "spring", stiffness: 400, damping: 40 }}
                   >
-                      {leftPanelContent || (
-                        <>
-                          <h3 className="text-lg font-semibold mb-4 text-white">Left Panel</h3>
-                          <p className="text-zinc-300">This is the left extension panel. You can add any content here.</p>
-                        </>
-                      )}                
+                    {leftPanelContent || (
+                      <>
+                        <h3 className="text-lg font-semibold mb-4 text-white">Left Panel</h3>
+                        <p className="text-zinc-300">This is the left extension panel. You can add any content here.</p>
+                      </>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -191,7 +194,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                       />
                     )}
                     <div className="text-start text-2xl font-bold">{header?.title || "AI Assistant"}</div>
-                    
+
                   </div>
                   <X
                     className="text-zinc-400 cursor-pointer"
@@ -201,7 +204,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                 {/* Vertically centered left panel toggle */}
                 {leftPanelContent && (
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10">
-                    <ChevronLeft 
+                    <ChevronLeft
                       className={`cursor-pointer transition-transform ${leftPanelOpen ? 'rotate-180' : ''}`}
                       onClick={() => setLeftPanelOpen(!leftPanelOpen)}
                     />
