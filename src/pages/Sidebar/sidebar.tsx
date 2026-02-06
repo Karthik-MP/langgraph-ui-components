@@ -4,15 +4,15 @@ import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
+import { logger } from "@/utils/logger";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronLeft } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
 import ChatButton from "../../components/ChatButton";
 import ChatInput from "../../components/sidebar/ChatInput";
-import { logger } from "@/utils/logger";
 
 /**
  * Main sidebar chat interface component.
@@ -43,7 +43,7 @@ import { logger } from "@/utils/logger";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
@@ -69,9 +69,13 @@ export default function Sidebar(props: ChatSidebarProps) {
 
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
+    let contextValues: Record<string, any> | undefined = undefined;
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
-      if (result && result.length > 0) latestFiles = result;
+      if (Array.isArray(result?.files) && result.files.length > 0) {
+        latestFiles = result.files as FileInfo[];
+      }
+      if (result && result?.contextValues) contextValues = result.contextValues;
     }
     logger.debug("Using files for submission:", latestFiles);
     // Create content blocks based on upload type
@@ -104,7 +108,7 @@ export default function Sidebar(props: ChatSidebarProps) {
     };
 
     // Use the unified submitMessage function
-    await stream.submitMessage(newHumanMessage);
+    await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
 
     setInput("");
     setFileInput([]);
@@ -211,7 +215,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                 )}
                 <div className="flex-1 overflow-auto scrollbar-none">
                   <div className="p-4">
-                    <ChatBody enableToolCallIndicator={enableToolCallIndicator} />
+                    <ChatBody enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
                   </div>
                 </div>
                 <Suggestion />
