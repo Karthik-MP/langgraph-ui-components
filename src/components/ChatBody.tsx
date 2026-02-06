@@ -185,7 +185,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
         {displayContent && (
           <AgentMessage
             agentName={chatBodyProps?.agentName}
-            agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
+            // agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
             message={{ ...combinedMessage, content: displayContent }}
             isStreaming={isStreamingThisMessage}
             onRegenerate={handleRegenerate}
