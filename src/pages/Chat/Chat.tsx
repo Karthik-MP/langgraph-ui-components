@@ -11,8 +11,8 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
-    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator } = chatProps || {};
+export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
+    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps } = chatProps || {};
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -58,9 +58,13 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
             return;
 
         let latestFiles: FileInfo[] = fileInput;
+        let contextValues: Record<string, any> | undefined = undefined;
         if (callThisOnSubmit) {
             const result = await callThisOnSubmit();
-            if (result && result.length > 0) latestFiles = result;
+            if (Array.isArray(result?.files) && result.files.length > 0) {
+                latestFiles = result.files as FileInfo[];
+            }
+            if (result && result?.contextValues) contextValues = result.contextValues;
         }
 
         // console.log("Using files for submission:", latestFiles);
@@ -81,7 +85,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
         };
 
         // Use the unified submitMessage function
-        await stream.submitMessage(newHumanMessage);
+        await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
 
         setIsFirstMessage(false);
         setInput("");
@@ -100,7 +104,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
                     const reader = new FileReader();
                     reader.onload = () => {
                         const result = reader.result as string;
-                        resolve(result.split(",")[1]); 
+                        resolve(result.split(",")[1]);
                     };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
@@ -170,7 +174,7 @@ export function Chat({chatProps}: {chatProps?: ChatUIProps}) {
                         <div className="flex h-full w-full flex-col">
                             <div className="flex-1 overflow-y-auto thread-scrollbar">
                                 <div className="mx-auto max-w-3xl px-4 py-6">
-                                    <ChatBody setIsFirstMessage={setIsFirstMessage} enableToolCallIndicator={enableToolCallIndicator} />
+                                    <ChatBody setIsFirstMessage={setIsFirstMessage} enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
                                 </div>
                             </div>
 
