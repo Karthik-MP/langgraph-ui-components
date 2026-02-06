@@ -1,4 +1,5 @@
 import { useStreamContext } from "@/providers/Stream";
+import type { chatBodyProps } from "@/types/ChatProps";
 import { logger } from "@/utils/logger";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -9,7 +10,7 @@ import type { MessageFeedback } from "./messages/MessageActions";
 import Thinking from "./Thinking";
 import ToolCallFunctions from "./ToolCallFunctions";
 
-export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean }) {
+export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
   const stream = useStreamContext();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
@@ -42,7 +43,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
       console.error("No parent checkpoint available for regeneration");
       return;
     }
-    
+
     await stream.submit(undefined, {
       checkpoint: parentCheckpoint,
       streamMode: ["values"],
@@ -183,6 +184,8 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator }:
         {/* 2. Agent message (combined content) */}
         {displayContent && (
           <AgentMessage
+            agentName={chatBodyProps?.agentName}
+            agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
             message={{ ...combinedMessage, content: displayContent }}
             isStreaming={isStreamingThisMessage}
             onRegenerate={handleRegenerate}
