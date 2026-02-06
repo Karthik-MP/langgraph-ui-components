@@ -242,7 +242,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       const currentMessages = streamValue.messages || [];
       // Merge identity with custom context, custom context takes precedence
       const mergedContext = options?.context 
-        ? { ...identity, ...options.context }
+        ? { ...identity, ...options.context, ...configuration }
         : identity || {};
       
       await streamValue.submit(
@@ -298,7 +298,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       await streamValue.submit(
         { messages: [...allCurrentMessages, message] },
         {
-          context: identity || {},
+          context: {...identity, ...configuration},
           streamMode: options?.streamMode || ["values"],
           streamSubgraphs: options?.streamSubgraphs ?? true,
           streamResumable: options?.streamResumable ?? true,
