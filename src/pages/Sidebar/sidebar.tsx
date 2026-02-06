@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
 import ChatButton from "../../components/ChatButton";
 import ChatInput from "../../components/sidebar/ChatInput";
+import { logger } from "@/utils/logger";
 
 /**
  * Main sidebar chat interface component.
@@ -68,45 +69,43 @@ export default function Sidebar(props: ChatSidebarProps) {
 
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
-    let skipSubmitMessage = false;
-
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
-      if (result && result.length > 0) {
-        latestFiles = result;
-        skipSubmitMessage = true;
-      }
+      if (result && result.length > 0) latestFiles = result;
     }
-
-    if (!skipSubmitMessage && (input.trim().length > 0 || latestFiles.length > 0)) {
-      let contentBlocks: any;
-      if (s3_upload) {
-        let messageText = input.trim();
-        if (latestFiles.length > 0) {
-          const fileNames = latestFiles.map(file => file.fileName).join(", ");
-          const fileText = `${fileNames} uploaded`;
-          messageText = messageText ? `${fileText}\n\n - ${messageText}` : fileText;
-        }
-        contentBlocks = [{ type: "text", text: messageText }];
-      } else {
-        contentBlocks = [
-          ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-          ...latestFiles.map((file) => ({
-            type: "document" as const,
-            ...file,
-            cache_control: { type: "ephemeral" as const },
-          })),
-        ];
-      }
-
-      const newHumanMessage: Message = {
-        id: uuidv4(),
-        type: "human",
-        content: contentBlocks,
-      };
-
-      await stream.submitMessage(newHumanMessage);
+    logger.debug("Using files for submission:", latestFiles);
+    // Create content blocks based on upload type
+    let contentBlocks: any;
+    if (s3_upload) {
+      // For S3 uploads, send the text input (if any) as a text block
+      // and include each uploaded file as a separate `document` block.
+      contentBlocks = [
+        ...(input.trim().length > 0 ? [{ type: "text", text: input.trim() }] : []),
+        ...latestFiles.map((file) => ({
+          type: "document" as const,
+          source: { filename: file.fileName, filetype: file.fileType },
+        })),
+      ];
+    } else {
+      contentBlocks = [
+        ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
+        ...latestFiles.map((file) => ({
+          type: "document" as const,
+          ...file,
+          cache_control: { type: "ephemeral" as const },
+        })),
+      ];
     }
+    logger.debug("Constructed content blocks:", contentBlocks);
+    const newHumanMessage: Message = {
+      id: uuidv4(),
+      type: "human",
+      content: contentBlocks,
+    };
+
+    // Use the unified submitMessage function
+    await stream.submitMessage(newHumanMessage);
+
     setInput("");
     setFileInput([]);
   };
