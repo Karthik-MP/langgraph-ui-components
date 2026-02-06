@@ -62,6 +62,24 @@ function HumanMessage({ message }: { message: Message }) {
           You
         </span>
 
+        {documents.length > 0 && (
+          <div className="flex flex-col gap-2 max-w-[90%]">
+            {documents.map((doc, idx) => (
+              <div
+                key={`${message.id}-doc-${idx}`}
+                className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
+              >
+                <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover/file:bg-blue-500/20 transition-colors">
+                  <FileIcon size={16} className="text-blue-400 shrink-0" />
+                </div>
+                <span className="text-sm text-zinc-200 truncate font-medium">
+                  {doc.source?.filename || `Document ${idx + 1}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {textContent && (
           <div className="relative">
             {isEditing ? (
@@ -133,26 +151,7 @@ function HumanMessage({ message }: { message: Message }) {
             )}
           </div>
         )}
-
-        {documents.length > 0 && (
-          <div className="flex flex-col gap-2 max-w-[90%]">
-            {documents.map((doc, idx) => (
-              <div
-                key={`${message.id}-doc-${idx}`}
-                className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
-              >
-                <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover/file:bg-blue-500/20 transition-colors">
-                  <FileIcon size={16} className="text-blue-400 shrink-0" />
-                </div>
-                <span className="text-sm text-zinc-200 truncate font-medium">
-                  {doc.source?.filename || `Document ${idx + 1}`}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
-
       <div
         className="size-9 shrink-0 flex items-center justify-center"
         data-alt="User Avatar"
