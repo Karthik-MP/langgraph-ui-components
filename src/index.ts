@@ -24,3 +24,5 @@ export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { FileInfo } from "./types/fileInput";
 export type { SuggestionsOptions } from "./providers/useChatSuggestions";
 export type { CustomTool } from "./types/CustomTools";
+export type { CallThisOnSubmitResponse } from "./types/ChatProps";
+export type { chatBodyProps } from "./types/ChatProps";

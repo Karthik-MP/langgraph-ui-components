@@ -1,5 +1,6 @@
 /* @refresh reset */
 import { useChatRuntime } from "@/providers/ChatRuntime";
+import { logger } from "@/utils/logger";
 import { type Message } from "@langchain/langgraph-sdk";
 import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
 import {
@@ -21,7 +22,6 @@ import {
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useThread } from "./Thread";
-import { logger } from "@/utils/logger";
 
 export type StateType = {
   messages: Message[];
@@ -42,6 +42,7 @@ const useTypedStream = useStream<
 
 type StreamContextType = UseStream<StateType, {
   UpdateType: {
+    
     messages?: Message[] | Message | string;
     ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
   };
@@ -52,7 +53,6 @@ type StreamContextType = UseStream<StateType, {
     options?: {
       /** If true, message is meant for agent only (not user-visible) */
       type?: Message["type"];
-      /** Additional config to pass to the agent */
       /** Name field required for function/tool messages */
       name?: string;
       /** If true, message is hidden from user UI */
@@ -79,6 +79,7 @@ type StreamContextType = UseStream<StateType, {
       streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
       streamSubgraphs?: boolean;
       streamResumable?: boolean;
+      contextValues?: any;
     }
   ) => Promise<void>;
   regenerateMessage: (messageId: string) => Promise<void>;
@@ -289,7 +290,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
         streamSubgraphs?: boolean;
         streamResumable?: boolean;
-        config?: any;
+        contextValues?: any;
       }
     ) => {
       // Get ALL current messages (including local AI messages)
@@ -298,7 +299,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       await streamValue.submit(
         { messages: [...allCurrentMessages, message] },
         {
-          context: {...identity, ...configuration},
+          context: {...identity, ...options?.contextValues},
           streamMode: options?.streamMode || ["values"],
           streamSubgraphs: options?.streamSubgraphs ?? true,
           streamResumable: options?.streamResumable ?? true,
@@ -309,7 +310,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         }
       );
     },
-    [streamValue, identity, configuration, combinedMessages]
+    [streamValue, identity, combinedMessages]
   );
 
   /**

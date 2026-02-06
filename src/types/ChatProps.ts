@@ -6,12 +6,23 @@ export interface headerProps {
     logoUrl?: string;
 }
 
+export interface chatBodyProps {
+    agentName?: string;
+    agentAvatarUrl?: string;
+}
+
+export interface CallThisOnSubmitResponse {
+    files?: FileInfo[];
+    contextValues?: Record<string, any>;
+}
+
 interface ChatProps {
     inputFileAccept?: string;
     enableToolCallIndicator?: boolean;
     handleFileSelect?: (e: FormEvent) => void;
-    callThisOnSubmit?: () => Promise<FileInfo[] | void>;
+    callThisOnSubmit?: () => Promise<CallThisOnSubmitResponse | void>;
     header?: headerProps;
+    chatBodyProps?: chatBodyProps;
 }
 
 export interface ChatSidebarProps extends ChatProps {
