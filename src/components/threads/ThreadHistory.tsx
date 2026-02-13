@@ -13,10 +13,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 type ThreadHeaderProp = {
-    header?: { title?: string }
+    title?: string;
 }
 
-export default function ThreadHistory({ header }: ThreadHeaderProp) {
+export default function ThreadHistory({ header, isSidebar }: { header?: ThreadHeaderProp, isSidebar?: boolean }) {
     const [collapsed, setCollapsed] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -54,17 +54,17 @@ export default function ThreadHistory({ header }: ThreadHeaderProp) {
 
     return (
         <aside
-            className={`flex h-full flex-col border-r border-white/10 bg-zinc transition-all duration-300 ease-in-out ${collapsed ? "w-14" : "w-64"}`}>
+            className={`flex h-full flex-col ${isSidebar ? "" : "border-r"} border-white/10 bg-zinc transition-all duration-300 ease-in-out ${collapsed ? "w-14" : "w-72"}`}>
             {/* Top */}
-            <div className="flex h-14 items-center mx-2 border-b border-white/10">
+            <div className="flex h-14 items-center border-b border-white/10">
                 {!collapsed && header && (
-                    <div className="flex gap-2 text-white/70 text-sm font-medium">
+                    <div className="flex gap-2 text-white/70 mx-2 text-lg font-medium">
                         {header.title}
                     </div>
                 )}
-                <div className="flex ml-auto cursor-pointer p-2 hover:bg-white/10 rounded-md">
+                {!isSidebar && (<div className="flex ml-auto mx-2 cursor-pointer p-2 hover:bg-white/10 rounded-md">
                     <PanelLeft className="h-5 w-5 text-white/70" onClick={() => setCollapsed(v => !v)} />
-                </div>
+                </div>)}
             </div>
 
             {/* Primary actions */}
@@ -101,13 +101,13 @@ export default function ThreadHistory({ header }: ThreadHeaderProp) {
                     }
 
                     return (
-                        <NavItem 
+                        <NavItem
                             key={index}
-                            icon={t.icon} 
-                            label={t.label} 
+                            icon={t.icon}
+                            label={t.label}
                             alt={t.alt}
-                            collapsed={collapsed} 
-                            onClick={handleClick} 
+                            collapsed={collapsed}
+                            onClick={handleClick}
                         />
                     );
                 })}
@@ -363,13 +363,13 @@ function ThreadList({
                                     <Share2 className="h-4 w-4" />
                                     Share
                                 </button>
-                                <button
+                                {/* <button
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-zinc-700"
                                     onClick={() => handleMenuAction('archive', t)}
                                 >
                                     <Archive className="h-4 w-4" />
                                     Archive
-                                </button>
+                                </button> */}
                                 <div className="my-1 border-t border-white/10" />
                                 <button
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-zinc-700"
