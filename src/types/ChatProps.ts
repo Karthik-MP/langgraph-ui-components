@@ -26,6 +26,7 @@ interface ChatProps {
 }
 
 export interface ChatSidebarProps extends ChatProps {
+    supportMultipleAgents?: boolean;
     filePreview?: (files: FileInfo[], setFileInput: Dispatch<SetStateAction<FileInfo[]>>) => React.ReactNode;
     s3_upload?: boolean;
     preventSubmit?: boolean;

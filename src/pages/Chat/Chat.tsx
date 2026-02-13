@@ -1,5 +1,6 @@
 import ChatBody from "@/components/ChatBody";
 import ChatInput from "@/components/sidebar/ChatInput";
+import Suggestion from "@/components/Suggestion";
 import ThreadHistory from "@/components/threads/ThreadHistory";
 import { useChatRuntime } from "@/providers/ChatRuntime";
 import { useFileProvider } from "@/providers/FileProvider";
@@ -177,7 +178,9 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                                     <ChatBody setIsFirstMessage={setIsFirstMessage} enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
                                 </div>
                             </div>
-
+                            <div className="mx-auto">
+                                <Suggestion />
+                            </div>
                             <div className="border-t border-white/10 p-1">
                                 <div className="mx-auto max-w-3xl">
                                     <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />

@@ -1,4 +1,5 @@
 import Suggestion from "@/components/Suggestion";
+import ThreadHistory from "@/components/threads/ThreadHistory";
 import { useFileProvider } from "@/providers/FileProvider";
 import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
@@ -7,7 +8,7 @@ import type { FileInfo } from "@/types/fileInput";
 import { logger } from "@/utils/logger";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, PanelLeft, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
@@ -43,10 +44,11 @@ import ChatInput from "../../components/sidebar/ChatInput";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportMultipleAgents = false } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
+  const [threadHistoryOpen, setThreadHistoryOpen] = useState(false);
   const { fileInput, setFileInput } = useFileProvider();
 
   const leftPanelOpen = externalLeftPanelOpen !== undefined ? externalLeftPanelOpen : internalLeftPanelOpen;
@@ -54,12 +56,21 @@ export default function Sidebar(props: ChatSidebarProps) {
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
-  const { setMode } = useThread();
+  const { setMode, threadId } = useThread();
 
   // Set thread mode to single when using Sidebar
+  // useEffect(() => {
+  //   setMode("single");
+  // }, [setMode]);
+
+ 
   useEffect(() => {
-    setMode("single");
-  }, [setMode]);
+    if (supportMultipleAgents) {
+      setMode("multi");
+    } else {
+      setMode("single");
+    }
+  }, [setMode, supportMultipleAgents]);
 
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -162,7 +173,7 @@ export default function Sidebar(props: ChatSidebarProps) {
 
             {/* Sidebar */}
             <motion.aside
-              className="fixed right-0 top-0 z-50 h-screen w-[520px] bg-black flex flex-col text-white"
+              className="fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -186,8 +197,8 @@ export default function Sidebar(props: ChatSidebarProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex h-full flex-col">
-                <div className="flex border-b border-zinc-800 py-4 px-6 justify-between items-center">
+              <div className="flex h-full flex-col w-[520px]">
+                <div className="flex border-b h-14  border-zinc-800 py-4 px-6 justify-between items-center">
                   <div className="flex items-center gap-3">
                     {header?.logoUrl && (
                       <img
@@ -199,10 +210,16 @@ export default function Sidebar(props: ChatSidebarProps) {
                     <div className="text-start text-2xl font-bold">{header?.title || "AI Assistant"}</div>
 
                   </div>
-                  <X
-                    className="text-zinc-400 cursor-pointer"
-                    onClick={() => setOpen(false)}
-                  />
+                  <div className="flex items-end gap-3">
+                    {supportMultipleAgents &&<PanelLeft
+                      className="h-5 text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors"
+                      onClick={() => setThreadHistoryOpen(!threadHistoryOpen)}
+                    />}
+                    <X
+                      className="text-zinc-400 cursor-pointer"
+                      onClick={() => setOpen(false)}
+                    />
+                  </div>
                 </div>
                 {/* Vertically centered left panel toggle */}
                 {leftPanelContent && (
@@ -233,8 +250,19 @@ export default function Sidebar(props: ChatSidebarProps) {
                     filePreview={filePreview}
                   />
                 </div>
-              </div>
-            </motion.aside>
+              </div>              <AnimatePresence>
+                {threadHistoryOpen && (
+                  <motion.div
+                    className="h-full w-[280px] bg-zinc-900 shadow-2xl border-l border-white/10"
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 280, opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  >
+                    <ThreadHistory isSidebar={true} header={{ title: "Sessions" }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>            </motion.aside>
           </>
         )}
       </AnimatePresence>

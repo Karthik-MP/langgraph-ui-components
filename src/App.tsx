@@ -9,7 +9,23 @@ import { ThreadProvider } from "./providers/Thread";
 import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
 import { CustomComponentProvider } from "./providers/CustomComponentProvider";
-import { SuggestionProvider } from "./providers/useChatSuggestions";
+import useChatSuggestions, { SuggestionProvider } from "./providers/useChatSuggestions";
+import { Chat } from "./pages/Chat/Chat";
+
+function ChatWrapper({ children }: { children?: React.ReactNode }) {
+  useChatSuggestions({
+    instructions: "Suggest helpful next actions",
+    minSuggestions: 1,
+    maxSuggestions: 2,
+  });
+
+  return (<>
+    {/* <Sidebar supportMultipleAgents={true} /> */}
+    <Chat />
+  </>
+  )
+
+}
 
 function App() {
   const [identity] = useState<ChatIdentity>({
@@ -29,8 +45,7 @@ function App() {
             <CustomComponentProvider>
               <SuggestionProvider>
                 <FileProvider>
-                  <Sidebar />
-                  {/* <Chat /> */}
+                  <ChatWrapper />
                 </FileProvider>
               </SuggestionProvider>
             </CustomComponentProvider>
