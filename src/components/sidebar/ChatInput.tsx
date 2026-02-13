@@ -7,6 +7,7 @@ import {
   type SetStateAction,
   useState,
   type DragEvent,
+  useRef,
 } from "react";
 
 export default function ChatInput({
@@ -36,6 +37,15 @@ export default function ChatInput({
     (input.trim().length > 0 || fileInput.length > 0) && !isLoading;
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    handleSubmit(e);
+    // Reset textarea height to initial size
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  };
 
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
@@ -96,8 +106,8 @@ export default function ChatInput({
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className={`relative flex flex-col gap-2 border rounded-xl m-2 bg-zinc-900 border-zinc-800 transition-colors ${
+      onSubmit={onSubmit}
+      className={`relative flex flex-col  border rounded-xl m-2 bg-zinc-900 border-zinc-800 transition-colors ${
         isDragOver ? 'border-blue-500 bg-zinc-800' : ''
       }`}
       onDragOver={handleDragOver}
@@ -109,6 +119,7 @@ export default function ChatInput({
 
       {/* Text input */}
       <textarea
+        ref={textareaRef}
         placeholder="Type your message..."
         value={input}
         onChange={(e) => {
@@ -131,7 +142,7 @@ export default function ChatInput({
           }
         }}
         disabled={isLoading}
-        className="w-full field-sizing-content resize-none p-3.5 bg-transparent text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed overflow-y-auto thread-scrollbar"
+        className="w-full field-sizing-content resize-none px-2.5 pt-2.5 bg-transparent text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed overflow-y-auto thread-scrollbar"
         rows={1}
       />
 
@@ -173,7 +184,7 @@ export default function ChatInput({
           <button
             type="submit"
             disabled={!canSubmit}
-            className="focus:outline-none transition-all bg-zinc-300 border rounded-full p-1 cursor-pointer"
+            className="focus:outline-none transition-all bg-zinc-300 border rounded-full p-1 mx-2 cursor-pointer"
             style={{ border: "none" }}
           >
             {isLoading ? (

@@ -79,8 +79,24 @@ The `Sidebar` component provides a chat interface with collapsible sidebar navig
 ```tsx
 import { Sidebar } from 'agentic-chat-ui-components';
 
-<Sidebar />
+<Sidebar 
+  supportMultipleAgents={true}
+  enableToolCallIndicator={true}
+  callThisOnSubmit={async () => uploadedFiles}
+  handleFileSelect={customFileHandler}
+/>
 ```
+
+**Props:**
+- `supportMultipleAgents?: boolean` - Enables multi-thread mode, allowing users to switch between different conversation threads. When `true`, clicking a thread in ThreadHistory will load that thread's messages. When `false` (default), only a single thread is maintained. Default: `false`
+- `enableToolCallIndicator?: boolean` - Show visual indicators when AI tools are being executed. Default: `false`
+- `callThisOnSubmit?: () => Promise<{ files?: FileInfo[], contextValues?: Record<string, any> }>` - Custom callback executed before message submission, useful for uploading files to external storage or adding context
+- `handleFileSelect?: (event: React.ChangeEvent<HTMLInputElement>) => void` - Custom file selection handler to override default behavior
+- `preventSubmit?: boolean` - When `true`, disables all message submission functionality. Useful for read-only or custom submission flows. Default: `false`
+- `header?: { title?: string, logoUrl?: string }` - Custom header configuration with title and logo
+- `leftPanelContent?: React.ReactNode` - Custom content to display in the left expansion panel
+- `leftPanelOpen?: boolean` - External control for left panel open state
+- `setLeftPanelOpen?: (open: boolean) => void` - External setter for left panel open state
 
 ## Exported Providers
 
@@ -266,7 +282,3 @@ Full TypeScript definitions available for:
 - `ChatRuntimeContextValue`
 - `FileInfo`
 - `SuggestionsOptions`
-
-## Development Notes
-
-This library is designed to work with LangChain/LangGraph for AI agent interactions. All heavy dependencies are peer dependencies to keep the bundle size small (~50-200 KB).
