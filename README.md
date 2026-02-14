@@ -7,6 +7,7 @@ A React component library for building AI chat interfaces with LangChain/LangGra
 - 🎨 **Pre-styled chat UI components** - Sidebar, message bubbles, input fields, markdown rendering
 - 🔄 **Streaming support** - Real-time AI response streaming
 - 📎 **File uploads** - Built-in file handling and metadata
+- � **Speech-to-text** - Built-in microphone button with Whisper transcription support
 - 🎭 **Custom components** - Inject your own React components into chat messages
 - 🧩 **Provider-based architecture** - Flexible state management with React Context
 - 📝 **TypeScript** - Full type definitions included
@@ -46,6 +47,45 @@ function App() {
 }
 ```
 
+### Speech-to-Text Configuration
+
+To enable speech-to-text functionality with your Whisper API backend, configure the `textToSpeechVoice` property in the `identity` object:
+
+```tsx
+import { 
+  Sidebar,
+  ChatProvider,
+  ChatRuntimeProvider
+} from 'agentic-chat-ui-components';
+import 'agentic-chat-ui-components/styles.css';
+
+function App() {
+  return (
+    <ChatRuntimeProvider
+      apiUrl="your-api-url"
+      assistantId="your-assistant-id"
+      identity={{
+        user_id: "user123",
+        org_id: "org456",
+        textToSpeechVoice: {
+          apiUrl: "https://domain_url.com/v1/audio/transcriptions",
+          apiKey: "your-api-key",
+          model: "Systran/faster-whisper-large-v3"
+        }
+      }}
+    >
+      <Sidebar supportSpeechToText={true}/>
+    </ChatRuntimeProvider>
+  );
+}
+```
+
+**Speech-to-Text Props:**
+- `textToSpeechVoice.apiUrl` (string): The endpoint URL for your Whisper transcription API. 
+- `textToSpeechVoice.apiKey` (string): Bearer token for authentication with your Whisper API backend.
+
+The microphone button in the ChatInput component will automatically use these settings for audio transcription.
+
 ## Exported Components
 
 - `Sidebar` - Main chat UI with sidebar navigation
@@ -80,7 +120,7 @@ The `Sidebar` component provides a chat interface with collapsible sidebar navig
 import { Sidebar } from 'agentic-chat-ui-components';
 
 <Sidebar 
-  supportMultipleAgents={true}
+  supportChatHistory={true}
   enableToolCallIndicator={true}
   callThisOnSubmit={async () => uploadedFiles}
   handleFileSelect={customFileHandler}
@@ -88,7 +128,7 @@ import { Sidebar } from 'agentic-chat-ui-components';
 ```
 
 **Props:**
-- `supportMultipleAgents?: boolean` - Enables multi-thread mode, allowing users to switch between different conversation threads. When `true`, clicking a thread in ThreadHistory will load that thread's messages. When `false` (default), only a single thread is maintained. Default: `false`
+- `supportChatHistory?: boolean` - Enables multi-thread mode, allowing users to switch between different conversation threads. When `true`, clicking a thread in ThreadHistory will load that thread's messages. When `false` (default), only a single thread is maintained. Default: `false`
 - `enableToolCallIndicator?: boolean` - Show visual indicators when AI tools are being executed. Default: `false`
 - `callThisOnSubmit?: () => Promise<{ files?: FileInfo[], contextValues?: Record<string, any> }>` - Custom callback executed before message submission, useful for uploading files to external storage or adding context
 - `handleFileSelect?: (event: React.ChangeEvent<HTMLInputElement>) => void` - Custom file selection handler to override default behavior
@@ -282,3 +322,7 @@ Full TypeScript definitions available for:
 - `ChatRuntimeContextValue`
 - `FileInfo`
 - `SuggestionsOptions`
+
+## Keywords
+
+`langgraph ui components` `react` `chat-ui` `ai-components` `chatbot` `sidebar` `streaming` `langchain` `assistant` `chatgpt-ui`
