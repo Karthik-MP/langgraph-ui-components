@@ -10,7 +10,7 @@ import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
 import { CustomComponentProvider } from "./providers/CustomComponentProvider";
 import useChatSuggestions, { SuggestionProvider } from "./providers/useChatSuggestions";
-import { Chat } from "./pages/Chat/Chat";
+// import { Chat } from "./pages/Chat/Chat";
 
 function ChatWrapper({ children }: { children?: React.ReactNode }) {
   useChatSuggestions({
@@ -20,8 +20,9 @@ function ChatWrapper({ children }: { children?: React.ReactNode }) {
   });
 
   return (<>
-    {/* <Sidebar supportMultipleAgents={true} /> */}
-    <Chat />
+    <Sidebar supportChatHistory={true} supportSpeechToText={true} />
+    {/* <Chat /> */}
+    {children}
   </>
   )
 
@@ -32,6 +33,11 @@ function App() {
     user_id: "68f3b3ba4ce23e5b582b7780",
     org_id: "1",
     quote_id: "695b5cfcc4d07dc56f093d92",
+    textToSpeechVoice: {
+      apiUrl: "https://whisper.gauravshivaprasad.com/v1/audio/transcriptions",
+      apiKey: "sk-UqngFFpeT8V1j6LQh44zGhQU71W14A02VrY2n6K7eT1qsyE5",
+      model: "Systran/faster-whisper-large-v3"
+    }
   });
   return (
     <React.Suspense fallback={<div>Loading (layout)...</div>}>

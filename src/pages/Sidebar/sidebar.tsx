@@ -44,7 +44,7 @@ import ChatInput from "../../components/sidebar/ChatInput";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportMultipleAgents = false } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, supportSpeechToText = false } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
@@ -56,21 +56,21 @@ export default function Sidebar(props: ChatSidebarProps) {
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
-  const { setMode, threadId } = useThread();
+  const { setMode } = useThread();
 
   // Set thread mode to single when using Sidebar
   // useEffect(() => {
   //   setMode("single");
   // }, [setMode]);
 
- 
+
   useEffect(() => {
-    if (supportMultipleAgents) {
+    if (supportChatHistory) {
       setMode("multi");
     } else {
       setMode("single");
     }
-  }, [setMode, supportMultipleAgents]);
+  }, [setMode, supportChatHistory]);
 
   const defaultHandleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -211,7 +211,7 @@ export default function Sidebar(props: ChatSidebarProps) {
 
                   </div>
                   <div className="flex items-end gap-3">
-                    {supportMultipleAgents &&<PanelLeft
+                    {supportChatHistory && <PanelLeft
                       className="h-5 text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors"
                       onClick={() => setThreadHistoryOpen(!threadHistoryOpen)}
                     />}
@@ -241,6 +241,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                     input={input}
                     inputFileAccept={inputFileAccept}
                     setInput={setInput}
+                    supportSpeechToText={supportSpeechToText}
                     handleSubmit={defaultHandleSubmit}
                     isLoading={isLoading}
                     fileInput={fileInput}
