@@ -1,6 +1,6 @@
 import { useStreamContext } from "@/providers/Stream";
 import type { Message } from "@langchain/langgraph-sdk";
-import { CircleUser, Copy, FileIcon, Pencil, Send, X } from "lucide-react";
+import { Copy, FileIcon, Pencil, Send, X } from "lucide-react";
 import React, { useState } from "react";
 
 function HumanMessage({ message }: { message: Message }) {
@@ -56,18 +56,15 @@ function HumanMessage({ message }: { message: Message }) {
   };
 
   return (
-    <div className="flex items-end gap-3 justify-end w-full group my-1">
-      <div className="flex flex-1 flex-col gap-2 items-end min-w-0">
-        <span className="text-zinc-400 text-xs font-medium mr-1 opacity-80">
-          You
-        </span>
+    <div className="flex flex-col gap-1 w-full group my-1">
+      <div className="flex flex-1 flex-col gap-2 items-end min-w-0 mr-4">
 
         {documents.length > 0 && (
           <div className="flex flex-col gap-2 max-w-[90%]">
             {documents.map((doc, idx) => (
               <div
                 key={`${message.id}-doc-${idx}`}
-                className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
+                className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-1 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
               >
                 <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover/file:bg-blue-500/20 transition-colors">
                   <FileIcon size={16} className="text-blue-400 shrink-0" />
@@ -81,82 +78,68 @@ function HumanMessage({ message }: { message: Message }) {
         )}
 
         {textContent && (
-          <div className="relative">
-            {isEditing ? (
-              <div className="flex flex-col gap-2 w-full">
-                <textarea
-                  value={editedText}
-                  onChange={(e) => setEditedText(e.target.value)}
-                  onKeyDown={(e)=>{
-                    if(e.key === "Enter"){
-                      e.preventDefault();
-                      handleSubmitEdit();
-                    }
+          <div className="flex items-start gap-2">
+            {!isEditing && (
+              <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pt-4">
+                <Pencil
+                  size={16}
+                  className="text-zinc-500 cursor-pointer hover:text-white"
+                  onClick={() => {
+                    setIsEditing(true);
+                    setEditedText(textContent);
                   }}
-                  className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-zinc-900 border border-zinc-800 text-white shadow-lg break-words overflow-wrap-anywhere resize-none focus:outline-none min-h-[60px]"
-                  autoFocus
                 />
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setEditedText("");
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
-                  >
-                    <X size={14} />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitEdit}
-                    disabled={!editedText.trim()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Send size={14} />
-                    Send
-                  </button>
-                </div>
+                <Copy
+                  size={16}
+                  className="text-zinc-500 cursor-pointer hover:text-white"
+                  onClick={() => {
+                    navigator.clipboard.writeText(textContent);
+                  }}
+                />
               </div>
-            ) : (
-              <>
-                <div className="text-[15px] font-normal leading-relaxed rounded-2xl rounded-tr-sm px-5 py-3.5 bg-zinc-900 border border-zinc-900 text-white shadow-lg max-w-full break-words overflow-wrap-anywhere ">
+            )}
+            <div className="relative flex-1">
+              {isEditing ? (
+                <div className="flex flex-col gap-2 w-full">
+                  <textarea
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    onKeyDown={(e)=>{
+                      if(e.key === "Enter"){
+                        e.preventDefault();
+                        handleSubmitEdit();
+                      }
+                    }}
+                    className="text-[15px] font-normal leading-relaxed rounded-2xl px-5 bg-zinc-900 border border-zinc-800 text-white shadow-lg break-words overflow-wrap-anywhere resize-none focus:outline-none min-h-[60px]"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditedText("");
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                    <button
+                      onClick={handleSubmitEdit}
+                      disabled={!editedText.trim()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[15px] font-normal leading-relaxed rounded-xl py-2 px-4 bg-[#242322] text-white shadow-lg max-w-full break-words overflow-wrap-anywhere ">
                   {textContent}
                 </div>
-                <div
-                  className="
-                    absolute right-1 my-2 flex items-center gap-2
-                    opacity-0 group-hover:opacity-100
-                    transition-opacity duration-300
-                    z-10
-                  "
-                >
-                  <Pencil
-                    size={16}
-                    className="text-zinc-500 cursor-pointer hover:text-white"
-                    onClick={() => {
-                      setIsEditing(true);
-                      setEditedText(textContent);
-                    }}
-                  />
-
-                  <Copy
-                    size={16}
-                    className="text-zinc-500 cursor-pointer hover:text-white"
-                    onClick={() => {
-                      navigator.clipboard.writeText(textContent);
-                    }}
-                  />
-                </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         )}
-      </div>
-      <div
-        className="size-9 shrink-0 flex items-center justify-center"
-        data-alt="User Avatar"
-      >
-        <CircleUser className="text-white" size={22} />
       </div>
     </div>
   );
