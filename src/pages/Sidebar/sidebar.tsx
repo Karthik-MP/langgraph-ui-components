@@ -8,7 +8,7 @@ import type { FileInfo } from "@/types/fileInput";
 import { logger } from "@/utils/logger";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, PanelLeft, X } from "lucide-react";
+import { ChevronLeft, X, PanelLeft } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
@@ -56,14 +56,14 @@ export default function Sidebar(props: ChatSidebarProps) {
 
   const stream = useStreamContext();
   const isLoading = stream.isLoading;
-  const { setMode, threadId } = useThread();
+  const { setMode } = useThread();
 
   // Set thread mode to single when using Sidebar
   // useEffect(() => {
   //   setMode("single");
   // }, [setMode]);
 
- 
+
   useEffect(() => {
     if (supportMultipleAgents) {
       setMode("multi");
@@ -182,7 +182,7 @@ export default function Sidebar(props: ChatSidebarProps) {
               <AnimatePresence>
                 {leftPanelOpen && (
                   <motion.div
-                    className="fixed right-[520px] top-0 h-full w-[520px]"
+                    className="fixed right-[000vw] top-0 h-full w-full w-1/ "
                     initial={{ x: "30%" }}
                     animate={{ x: 0 }}
                     exit={{ x: "30%" }}
@@ -197,8 +197,8 @@ export default function Sidebar(props: ChatSidebarProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex h-full flex-col w-[520px]">
-                <div className="flex border-b h-14  border-zinc-800 py-4 px-6 justify-between items-center">
+              <div className="flex h-full flex-col w-full w-full lg:w-1/ xl:w-[520px]">
+                <div className="flex py-3 px-6 justify-between items-center border-b border-zinc-700/30">
                   <div className="flex items-center gap-3">
                     {header?.logoUrl && (
                       <img
@@ -207,11 +207,11 @@ export default function Sidebar(props: ChatSidebarProps) {
                         className="h-8 w-8 object-contain rounded-sm"
                       />
                     )}
-                    <div className="text-start text-2xl font-bold">{header?.title || "AI Assistant"}</div>
+                    <div className="text-start text-xl font-bold">{header?.title || "AI Assistant"}</div>
 
                   </div>
                   <div className="flex items-end gap-3">
-                    {supportMultipleAgents &&<PanelLeft
+                    {supportMultipleAgents && !threadHistoryOpen && <PanelLeft
                       className="h-5 text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors"
                       onClick={() => setThreadHistoryOpen(!threadHistoryOpen)}
                     />}
@@ -230,13 +230,19 @@ export default function Sidebar(props: ChatSidebarProps) {
                     />
                   </div>
                 )}
-                <div className="flex-1 overflow-auto scrollbar-none">
-                  <div className="p-4">
-                    <ChatBody enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
+                <div className="flex-1 relative">
+                  <div className="absolute inset-0 overflow-auto scrollbar-none">
+                    <div className="pb-20 p-2">
+                      <ChatBody enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-transparent px-4 pointer-events-none z-10">
+                    <div className="pointer-events-auto">
+                      <Suggestion />
+                    </div>
                   </div>
                 </div>
-                <Suggestion />
-                <div className="sticky bottom-0 border-t border-zinc-800 m-2">
+                <div className="sticky bottom-0">
                   <ChatInput
                     input={input}
                     inputFileAccept={inputFileAccept}
@@ -253,13 +259,13 @@ export default function Sidebar(props: ChatSidebarProps) {
               </div>              <AnimatePresence>
                 {threadHistoryOpen && (
                   <motion.div
-                    className="h-full w-[280px] bg-zinc-900 shadow-2xl border-l border-white/10"
+                    className="h-full w-[280px] shadow-2xl border-l border-white/10"
                     initial={{ width: 0, opacity: 0 }}
                     animate={{ width: 280, opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   >
-                    <ThreadHistory isSidebar={true} header={{ title: "Sessions" }} />
+                    <ThreadHistory isSidebar={true} header={{ title: "Sessions" }} onClose={() => setThreadHistoryOpen(false)} />
                   </motion.div>
                 )}
               </AnimatePresence>            </motion.aside>

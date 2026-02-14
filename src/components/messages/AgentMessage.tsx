@@ -30,17 +30,18 @@ function AgentMessage({
   const content = getContentString(message?.content);
 
   return (
-    <div className="flex items-start gap-3 w-full group">
-      <div
-        className="rounded-full size-8 shrink-0 bg-zinc-800 border border-zinc-700 flex items-center justify-center p-2"
-        data-alt="AI Avatar"
-      >
-        <BotMessageSquare className="text-sm" color="white" />
+    <div className="flex flex-col gap-1 w-full group">
+      <div className="flex items-center gap-3 w-full">
+        <div
+          className="rounded-full size-8 shrink-0 bg-zinc-800 flex items-center justify-center p-2"
+          data-alt="AI Avatar"
+        >
+          <BotMessageSquare className="text-xs" color="white" />
+        </div>
+        <span className="text-zinc-500 text-sm">{agentName || "Agent"}</span>
       </div>
-
       <div className="flex flex-1 flex-col gap-1 items-start min-w-0">
-        <span className="text-zinc-500 text-xs ml-1">{agentName || "agent"}</span>
-        <div className="text-sm font-normal leading-relaxed rounded-2xl rounded-tl-none px-4 py-2 text-left bg-zinc-900 border border-zinc-800 text-zinc-200 shadow-sm max-w-full break-words overflow-wrap-anywhere markdown-content">
+        <div className="text-sm font-normal leading-relaxed px-2 text-left text-zinc-200 shadow-sm max-w-full break-words overflow-wrap-anywhere markdown-content">
           {content ? (<AgentMarkdown content={content} />) : (
             <>
               <div className="flex items-center gap-2 text-zinc-500">
@@ -71,7 +72,7 @@ function AgentMessage({
             onRegenerate={onRegenerate}
             feedback={feedback}
             onFeedback={onFeedback}
-            className="ml-1"
+            className=""
           />
         )}
       </div>

@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 export default function useTools() {
     const defaultTools: CustomTool[] = [
-        { label: 'New chat', alt: 'Start New Chat', onClick: () => { }, icon: <Plus /> },
         { label: 'Search', alt: 'Search the threads', onClick: () => { }, icon: <Search /> },
+        { label: 'Chat', alt: 'Start New Chat', onClick: () => { }, icon: <Plus /> },
     ]
     const [tool, setTools] = useState<CustomTool[]>(defaultTools);
 
