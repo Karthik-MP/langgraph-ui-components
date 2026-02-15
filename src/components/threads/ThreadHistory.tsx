@@ -344,7 +344,7 @@ function ThreadList({
 
                             {!isEditing && hoveredThread === t.thread_id && (
                                 <button
-                                    className="flex-shrink-0 p-1 rounded-md hover:bg-zinc-700"
+                                    className="flex-shrink-0 p-2 rounded-md hover:bg-zinc-700"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setDropdownThread(dropdownThread === t.thread_id ? null : t.thread_id);

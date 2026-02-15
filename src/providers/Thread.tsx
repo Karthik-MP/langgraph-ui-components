@@ -1,5 +1,5 @@
 import { getApiKey, type Thread } from "@langchain/langgraph-sdk";
-import { createContext, useCallback, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { validate } from "uuid";
 import { useChatRuntime } from "./ChatRuntime";
 import { createClient } from "./client";
@@ -76,6 +76,15 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
   const [mode, setMode] = useState<ThreadMode>("single");
 
+  // Extract thread ID from URL query parameter on component mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const threadFromUrl = searchParams.get("thread");
+    if (threadFromUrl) {
+      setThreadId(threadFromUrl);
+    }
+  }, []);
+
 
   const getThreads = useCallback(async (): Promise<Thread[]> => {
     if (!apiUrl || !assistantId) return [];
@@ -94,12 +103,12 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   const deleteThread = useCallback(async (threadIdToDelete: string) => {
     if (!apiUrl) return;
     const client = createClient(apiUrl, getApiKey("") ?? undefined);
-    
+
     await client.threads.delete(threadIdToDelete);
-    
+
     // Update local state
     setThreads(prev => prev.filter(t => t.thread_id !== threadIdToDelete));
-    
+
     // Clear current thread if it was deleted
     if (threadId === threadIdToDelete) {
       setThreadId(null);
@@ -109,9 +118,9 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   const updateThread = useCallback(async (threadIdToUpdate: string, metadata: Record<string, any>) => {
     if (!apiUrl) return;
     const client = createClient(apiUrl, getApiKey("") ?? undefined);
-    
+
     await client.threads.update(threadIdToUpdate, { metadata });
-    
+
     // Refresh threads to get updated data
     const updatedThreads = await getThreads();
     setThreads(updatedThreads);
