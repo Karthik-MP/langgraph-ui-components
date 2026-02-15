@@ -20,8 +20,9 @@ function ChatWrapper({ children }: { children?: React.ReactNode }) {
   });
 
   return (<>
-    {/* <Sidebar supportMultipleAgents={true} /> */}
-    <Chat />
+    <Sidebar supportMultipleAgents={true} />
+    {/* <Chat /> */}
+    {children}
   </>
   )
 

@@ -19,7 +19,7 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const { threads, getThreads, setThreadId, setThreads, setThreadsLoading } = useThread();
-    const { tool } = useTools();
+    const { tool, userDefinedTools } = useTools();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -98,7 +98,7 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
 
             {/* Search input - full width when open */}
             {searchOpen && (
-                <div className="px-2 pb-2">
+                <div className="p-2 mr-2">
                     <input
                         type="text"
                         placeholder="Search chats..."
@@ -116,9 +116,18 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
             )}
 
             {/* Chats (scrollable) */}
-            <div className="flex-1 flex flex-col px-2 overflow-hidden">
+            <div className="flex-1 flex flex-col p-2 mr-2 overflow-hidden">
                 <>
-                   
+                    {userDefinedTools.map((t, index) => (
+                        <NavItem
+                            key={index}
+                            icon={t.icon}
+                            label={t.label}
+                            alt={t.alt}
+                            onClick={t.onClick}
+                            showText={true}
+                        />
+                    ))}
                     <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden thread-scrollbar">
                         <ThreadList threads={filteredThreads} />
                     </div>
@@ -160,8 +169,8 @@ function NavItem({
             onClick={onClick}
             title={alt || label}
         >
-            <div className="h-5 w-5">{icon}</div>
-            {showText && <span className="text-sm">{label}</span>}
+            {icon}
+            {showText && <span className="text-md font-medium">{label}</span>}
         </button>
     );
 }
