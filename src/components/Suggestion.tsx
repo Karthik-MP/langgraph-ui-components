@@ -36,7 +36,7 @@ export default function Suggestion() {
                             className={`${sizeClass} text-center break-words overflow-hidden`}
                             onClick={handleClick}
                         >
-                            <span className="whitespace-normal line-clamp-2">{suggestion}</span>
+                            <span className="whitespace-normal line-clamp-2 text-white">{suggestion}</span>
                         </LiquidButton>
                     );
                 })}
