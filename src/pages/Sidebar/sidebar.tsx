@@ -8,7 +8,7 @@ import type { FileInfo } from "@/types/fileInput";
 import { logger } from "@/utils/logger";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, X, PanelLeft } from "lucide-react";
+import { X, PanelLeft, ScanEye, EyeOff } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
@@ -173,7 +173,8 @@ export default function Sidebar(props: ChatSidebarProps) {
 
             {/* Sidebar */}
             <motion.aside
-              className="fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70"
+              className={`fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70 ${threadHistoryOpen ? "w-[calc(25vw+280px)]" : "w-[25vw]"
+                }`}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -182,10 +183,10 @@ export default function Sidebar(props: ChatSidebarProps) {
               <AnimatePresence>
                 {leftPanelOpen && (
                   <motion.div
-                    className="fixed right-[000vw] top-0 h-full w-full w-1/ "
-                    initial={{ x: "30%" }}
+                    className="absolute right-full top-0 h-full w-[25vw]"
+                    initial={{ x: "0" }}
                     animate={{ x: 0 }}
-                    exit={{ x: "30%" }}
+                    exit={{ x: "0%" }}
                     transition={{ type: "spring", stiffness: 400, damping: 40 }}
                   >
                     {leftPanelContent || (
@@ -197,9 +198,25 @@ export default function Sidebar(props: ChatSidebarProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex h-full flex-col w-full w-full lg:w-1/ xl:w-[520px]">
+              <div className="flex h-full flex-col flex-1">
                 <div className="flex py-3 px-6 justify-between items-center border-b border-zinc-700/30">
                   <div className="flex items-center gap-3">
+                    {/* Vertically centered left panel toggle */}
+                    {leftPanelContent && (
+                      <div className="flex items-start gap-3">
+                        {leftPanelOpen ? (
+                          <EyeOff
+                            className="cursor-pointer transition-transform h-5"
+                            onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+                          />
+                        ) : (
+                          <ScanEye
+                            className="cursor-pointer transition-transform h-5"
+                            onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+                          />
+                        )}
+                      </div>
+                    )}
                     {header?.logoUrl && (
                       <img
                         src={header?.logoUrl}
@@ -221,15 +238,6 @@ export default function Sidebar(props: ChatSidebarProps) {
                     />
                   </div>
                 </div>
-                {/* Vertically centered left panel toggle */}
-                {leftPanelContent && (
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10">
-                    <ChevronLeft
-                      className={`cursor-pointer transition-transform ${leftPanelOpen ? 'rotate-180' : ''}`}
-                      onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-                    />
-                  </div>
-                )}
                 <div className="flex-1 relative">
                   <div className="absolute inset-0 overflow-auto scrollbar-none">
                     <div className="pb-20 p-2">
