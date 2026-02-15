@@ -13,7 +13,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
-    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps } = chatProps || {};
+    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps, supportSpeechToText } = chatProps || {};
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -166,7 +166,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                             </h1>
 
                             <div className="w-full max-w-2xl px-4">
-                                <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
+                                <ChatInput input={input} setInput={setInput} supportSpeechToText={supportSpeechToText} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                             </div>
                         </div> :
                         // =========================
@@ -183,7 +183,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                             </div>
                             <div className="border-t border-white/10 p-1">
                                 <div className="mx-auto max-w-3xl">
-                                    <ChatInput input={input} setInput={setInput} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
+                                    <ChatInput input={input} setInput={setInput} supportSpeechToText={supportSpeechToText} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                                 </div>
                             </div>
                         </div>
