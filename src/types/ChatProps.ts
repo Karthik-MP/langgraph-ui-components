@@ -23,10 +23,11 @@ interface ChatProps {
     callThisOnSubmit?: () => Promise<CallThisOnSubmitResponse | void>;
     header?: headerProps;
     chatBodyProps?: chatBodyProps;
+    supportSpeechToText?: boolean;
 }
 
 export interface ChatSidebarProps extends ChatProps {
-    supportMultipleAgents?: boolean;
+    supportChatHistory?: boolean;
     filePreview?: (files: FileInfo[], setFileInput: Dispatch<SetStateAction<FileInfo[]>>) => React.ReactNode;
     s3_upload?: boolean;
     preventSubmit?: boolean;
