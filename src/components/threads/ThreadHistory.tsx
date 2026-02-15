@@ -1,11 +1,10 @@
 import useTools from "@/hooks/useTools";
 import { useThread } from "@/providers/Thread";
-import { getContentString } from "@/utils/utils";
+import { getContentString, formatRelativeTime } from "@/utils/utils";
 import type { Thread } from "@langchain/langgraph-sdk";
 import {
-    Archive,
     MoreVertical,
-    PanelLeft,
+    PanelLeftClose,
     Pencil,
     Share2,
     Trash2
@@ -16,12 +15,11 @@ type ThreadHeaderProp = {
     title?: string;
 }
 
-export default function ThreadHistory({ header, isSidebar }: { header?: ThreadHeaderProp, isSidebar?: boolean }) {
-    const [collapsed, setCollapsed] = useState(false);
+export default function ThreadHistory({ header, isSidebar, onClose }: { header?: ThreadHeaderProp, isSidebar?: boolean, onClose?: () => void }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const { threads, getThreads, setThreadId, setThreads, setThreadsLoading } = useThread();
-    const { tool } = useTools();
+    const { tool, userDefinedTools } = useTools();
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -54,78 +52,86 @@ export default function ThreadHistory({ header, isSidebar }: { header?: ThreadHe
 
     return (
         <aside
-            className={`flex h-full flex-col ${isSidebar ? "" : "border-r"} border-white/10 bg-zinc transition-all duration-300 ease-in-out ${collapsed ? "w-14" : "w-72"}`}>
+            className={`flex h-full flex-col ${isSidebar ? "" : "border-r"} border-white/10 border-l border-white bg-zinc w-72`}>
             {/* Top */}
-            <div className="flex h-14 items-center border-b border-white/10">
-                {!collapsed && header && (
-                    <div className="flex gap-2 text-white/70 mx-2 text-lg font-medium">
-                        {header.title}
-                    </div>
-                )}
-                {!isSidebar && (<div className="flex ml-auto mx-2 cursor-pointer p-2 hover:bg-white/10 rounded-md">
-                    <PanelLeft className="h-5 w-5 text-white/70" onClick={() => setCollapsed(v => !v)} />
-                </div>)}
+            <div className="flex h-14 items-center justify-between border-b border-white/10 px-2">
+                <div className="flex items-center gap-3">
+                    {onClose && (
+                        <div className="cursor-pointer p-2 hover:bg-white/10 rounded-md">
+                            <PanelLeftClose className="h-5 w-5 text-white/70" onClick={onClose} />
+                        </div>
+                    )}
+                    {header && (
+                        <div className="text-white/70 text-lg font-medium">
+                            {header.title}
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-1">
+                    {tool.map((t, index) => {
+                        // Override onClick for specific tools
+                        let handleClick = t.onClick;
+                        if (t.label === 'Chat') {
+                            handleClick = () => setThreadId(null);
+                        } else if (t.label === 'Search') {
+                            handleClick = () => setSearchOpen(true);
+                        }
+
+                        // Skip search button when search is open (we show input below)
+                        if (t.label === 'Search' && searchOpen) {
+                            return null;
+                        }
+
+                        return (
+                            <NavItem
+                                key={index}
+                                icon={t.icon}
+                                label={t.label}
+                                alt={t.alt}
+                                onClick={handleClick}
+                                showText={false}
+                            />
+                        );
+                    })}
+                </div>
             </div>
 
-            {/* Primary actions */}
-            <div className="flex flex-col gap-1 px-2 py-3">
+            {/* Search input - full width when open */}
+            {searchOpen && (
+                <div className="p-2 mr-2">
+                    <input
+                        type="text"
+                        placeholder="Search chats..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onBlur={() => {
+                            if (!searchQuery.trim()) {
+                                setSearchOpen(false);
+                            }
+                        }}
+                        autoFocus
+                        className="w-full bg-zinc-800 text-white/80 text-sm px-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-zinc-600 placeholder:text-white/40"
+                    />
+                </div>
+            )}
 
-                {tool.map((t, index) => {
-                    // Override onClick for specific tools
-                    let handleClick = t.onClick;
-                    if (t.label === 'New chat') {
-                        handleClick = () => setThreadId(null);
-                    } else if (t.label === 'Search') {
-                        handleClick = () => setSearchOpen(true);
-                    }
-
-                    // Show search input instead of search button when searchOpen is true
-                    if (t.label === 'Search' && !collapsed && searchOpen) {
-                        return (
-                            <div key={index} className="px-2 py-2">
-                                <input
-                                    type="text"
-                                    placeholder="Search chats..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onBlur={() => {
-                                        if (!searchQuery.trim()) {
-                                            setSearchOpen(false);
-                                        }
-                                    }}
-                                    autoFocus
-                                    className="w-full bg-zinc-800 text-white/80 text-sm px-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-zinc-600 placeholder:text-white/40"
-                                />
-                            </div>
-                        );
-                    }
-
-                    return (
+            {/* Chats (scrollable) */}
+            <div className="flex-1 flex flex-col p-2 mr-2 overflow-hidden">
+                <>
+                    {userDefinedTools.map((t, index) => (
                         <NavItem
                             key={index}
                             icon={t.icon}
                             label={t.label}
                             alt={t.alt}
-                            collapsed={collapsed}
-                            onClick={handleClick}
+                            onClick={t.onClick}
+                            showText={true}
                         />
-                    );
-                })}
-            </div>
-
-            {/* Chats (scrollable) */}
-            <div className="flex-1 flex flex-col px-2 overflow-hidden">
-                {!collapsed && (
-                    <>
-                        <p className="mb-2 px-2 text-xs uppercase text-white/40">
-                            Your chats {searchQuery && `(${filteredThreads.length})`}
-                        </p>
-                        <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden thread-scrollbar">
-                            <ThreadList threads={filteredThreads} />
-                        </div>
-                    </>
-                )}
-
+                    ))}
+                    <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden thread-scrollbar">
+                        <ThreadList threads={filteredThreads} />
+                    </div>
+                </>
             </div>
 
             {/* User */}
@@ -147,14 +153,14 @@ function NavItem({
     icon,
     label,
     alt,
-    collapsed,
-    onClick
+    onClick,
+    showText = true
 }: {
     label: string;
     icon?: React.ReactNode;
     alt?: string;
-    collapsed: boolean;
     onClick?: () => void;
+    showText?: boolean;
 }) {
     return (
         <button
@@ -163,8 +169,8 @@ function NavItem({
             onClick={onClick}
             title={alt || label}
         >
-            <div className="h-5 w-5">{icon}</div>
-            {!collapsed && <span className="text-sm">{label}</span>}
+            {icon}
+            {showText && <span className="text-md font-medium">{label}</span>}
         </button>
     );
 }
@@ -296,7 +302,7 @@ function ThreadList({
                 return (
                     <div
                         key={t.thread_id}
-                        className="relative w-full rounded-xl hover:bg-zinc-800 group"
+                        className="relative w-full rounded-md hover:bg-zinc-800 group"
                         onMouseEnter={() => setHoveredThread(t.thread_id)}
                         onMouseLeave={() => setHoveredThread(null)}
                     >
@@ -318,17 +324,22 @@ function ThreadList({
                                     className="flex-1 bg-zinc-700 text-white/80 text-sm px-2 py-1 rounded outline-none focus:ring-1 focus:ring-zinc-500"
                                 />
                             ) : (
-                                <button
-                                    className="flex-1 items-start justify-start text-left font-normal min-w-0"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        onThreadClick?.(t.thread_id);
-                                        if (t.thread_id === threadId) return;
-                                        setThreadId(t.thread_id);
-                                    }}
-                                >
-                                    <p className="truncate text-ellipsis text-sm text-white/80">{itemText}</p>
-                                </button>
+                                <div className="flex-1 flex items-center justify-between min-w-0">
+                                    <button
+                                        className="flex-1 items-start justify-start text-left font-normal min-w-0"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            onThreadClick?.(t.thread_id);
+                                            if (t.thread_id === threadId) return;
+                                            setThreadId(t.thread_id);
+                                        }}
+                                    >
+                                        <p className="truncate text-ellipsis text-sm text-white/80">{itemText}</p>
+                                    </button>
+                                    <span className="flex-shrink-0 text-xs text-white/40 ml-2">
+                                        {formatRelativeTime(t.created_at)}
+                                    </span>
+                                </div>
                             )}
 
                             {!isEditing && hoveredThread === t.thread_id && (
