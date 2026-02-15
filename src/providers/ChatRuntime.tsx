@@ -12,6 +12,12 @@ export type ChatIdentity = {
   user_id?: string | null;
   /** Optional organization identifier */
   org_id?: string | null;
+  /** Optional text-to-speech voice configuration */
+  textToSpeechVoice?: {
+    apiUrl: string;
+    apiKey: string;
+    model: string;
+  }
   /** Allow additional custom identity fields */
   [key: string]: any;
 };

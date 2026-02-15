@@ -1,5 +1,5 @@
 import type { FileInfo } from "@/types/fileInput";
-import { MoveUp, Paperclip, Loader2 } from "lucide-react";
+import { MoveUp, Paperclip, Loader2, Mic, Square } from "lucide-react";
 import {
   type ChangeEvent,
   type Dispatch,
@@ -9,11 +9,13 @@ import {
   type DragEvent,
   useRef,
 } from "react";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 export default function ChatInput({
   input,
   inputFileAccept = ".png,.jpg,.jpeg,.pdf,.docx",
   setInput,
+  supportSpeechToText = false,
   handleSubmit,
   fileInput,
   setFileInput,
@@ -24,6 +26,7 @@ export default function ChatInput({
 }: {
   input: string;
   setInput: (value: string) => void;
+  supportSpeechToText?: boolean;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
   fileInput: FileInfo[];
   setFileInput: Dispatch<SetStateAction<FileInfo[]>>;
@@ -38,6 +41,35 @@ export default function ChatInput({
 
   const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Audio recording and transcription
+  const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, transcribeAudio } = useAudioRecorder();
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      // Stop recording and transcribe
+      const audioBlob = await stopRecording();
+      console.log("Audio blob received:", audioBlob?.size, "bytes");
+
+      if (audioBlob) {
+        try {
+          console.log("Sending audio to backend for transcription...");
+          const transcribedText = await transcribeAudio(audioBlob);
+          console.log("Transcription received:", transcribedText);
+
+          if (transcribedText) {
+            setInput(transcribedText);
+          }
+        } catch (error) {
+          console.error("Error processing audio:", error);
+          alert("Failed to transcribe audio. Please try again.");
+        }
+      }
+    } else {
+      // Start recording
+      await startRecording();
+    }
+  };
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     handleSubmit(e);
@@ -77,7 +109,7 @@ export default function ChatInput({
         return file.type.match(type.replace('*', '.*'));
       });
     });
-    
+
     if (acceptedFiles.length === 0) return;
 
     const fileDetails: FileInfo[] = await Promise.all(
@@ -86,7 +118,7 @@ export default function ChatInput({
           const reader = new FileReader();
           reader.onload = () => {
             const result = reader.result as string;
-            resolve(result.split(",")[1]); 
+            resolve(result.split(",")[1]);
           };
           reader.onerror = reject;
           reader.readAsDataURL(file);
@@ -107,9 +139,8 @@ export default function ChatInput({
   return (
     <form
       onSubmit={onSubmit}
-      className={`relative flex flex-col  border rounded-xl m-2 bg-zinc-900 border-zinc-800 transition-colors ${
-        isDragOver ? 'border-blue-500 bg-zinc-800' : ''
-      }`}
+      className={`relative flex flex-col  border rounded-xl m-2 bg-zinc-900 border-zinc-800 transition-colors ${isDragOver ? 'border-blue-500 bg-zinc-800' : ''
+        }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -155,7 +186,7 @@ export default function ChatInput({
               }`}
           >
             <Paperclip
-              size={24}
+              size={30}
               className="text-zinc-400 hover:text-white hover:bg-zinc-800 rounded p-1 transition-colors"
             />
           </label>
@@ -168,9 +199,32 @@ export default function ChatInput({
             className="hidden"
             onChange={handleFileSelect}
           />
+
+          {/* Microphone Button */}
+          {supportSpeechToText && (
+            <button
+              type="button"
+              onClick={handleMicClick}
+              disabled={isLoading || isTranscribing}
+              className={`${isRecording
+                  ? "text-red-500 hover:bg-red-900/20"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                } rounded p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={isRecording ? `Recording... ${recordingTime}s` : "Record audio"}
+            >
+              {isRecording ? <Square size={24} className="animate-pulse" /> : <Mic size={24} />}
+            </button>
+          )}
         </div>
 
         <div className="flex gap-2 items-center">
+          {isTranscribing && (
+            <span className="text-xs text-zinc-400 flex items-center gap-1">
+              <Loader2 size={14} className="animate-spin" />
+              Transcribing...
+            </span>
+          )}
+
           {isLoading && onCancel && (
             <button
               type="button"
