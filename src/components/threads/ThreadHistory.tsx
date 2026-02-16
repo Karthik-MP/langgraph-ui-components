@@ -1,5 +1,6 @@
 import useTools from "@/hooks/useTools";
 import { useThread } from "@/providers/Thread";
+import { useChatRuntime } from "@/providers/ChatRuntime";
 import { getContentString, formatRelativeTime } from "@/utils/utils";
 import type { Thread } from "@langchain/langgraph-sdk";
 import {
@@ -19,6 +20,7 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const { threads, getThreads, setThreadId, setThreads, setThreadsLoading } = useThread();
+    const { identity } = useChatRuntime();
     const { tool, userDefinedTools } = useTools();
 
     useEffect(() => {
@@ -28,7 +30,7 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
             .then(setThreads)
             .catch(console.error)
             .finally(() => setThreadsLoading(false));
-    }, []);
+    }, [identity?.authToken]);
 
     // Filter threads based on search query
     const filteredThreads = threads.filter((t) => {
