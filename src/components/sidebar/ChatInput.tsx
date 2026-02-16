@@ -49,19 +49,25 @@ export default function ChatInput({
     if (isRecording) {
       // Stop recording and transcribe
       const audioBlob = await stopRecording();
-      console.log("Audio blob received:", audioBlob?.size, "bytes");
 
       if (audioBlob) {
         try {
-          console.log("Sending audio to backend for transcription...");
           const transcribedText = await transcribeAudio(audioBlob);
-          console.log("Transcription received:", transcribedText);
 
           if (transcribedText) {
             setInput(transcribedText);
+            // Expand textarea to fit content
+            if (textareaRef.current) {
+              setTimeout(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = "auto";
+                  const maxHeight = 300;
+                  textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, maxHeight) + "px";
+                }
+              }, 0);
+            }
           }
         } catch (error) {
-          console.error("Error processing audio:", error);
           alert("Failed to transcribe audio. Please try again.");
         }
       }
