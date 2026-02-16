@@ -9,7 +9,7 @@ import { logger } from "@/utils/logger";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, PanelLeft, ScanEye, EyeOff } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
 import ChatButton from "../../components/ChatButton";
@@ -50,6 +50,65 @@ export default function Sidebar(props: ChatSidebarProps) {
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
   const [threadHistoryOpen, setThreadHistoryOpen] = useState(false);
   const { fileInput, setFileInput } = useFileProvider();
+  
+  // Resize state
+  const [leftPanelWidth, setLeftPanelWidth] = useState(30); // in vw
+  const [sidebarWidth, setSidebarWidth] = useState(30); // in vw
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
+
+  // Handle left panel resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        // For left panel: it extends to the left of the sidebar,
+        // so dragging LEFT (decreasing clientX) should INCREASE width
+        const deltaX = startXRef.current - e.clientX;
+        // Convert to vw
+        const deltaVw = (deltaX / window.innerWidth) * 100;
+        const newLeftPanelWidth = startWidthRef.current + deltaVw;
+        const maxLeftPanelWidth = 40;
+        const minLeftPanelWidth = 30;
+        
+        // Clamp the value
+        const clampedWidth = Math.max(minLeftPanelWidth, Math.min(maxLeftPanelWidth, newLeftPanelWidth));
+        setLeftPanelWidth(clampedWidth);
+      } else if (isResizingSidebar && sidebarRef.current) {
+        // For sidebar on right: moving left increases width (handle is on left edge)
+        const deltaX = startXRef.current - e.clientX;
+        // Convert to vw
+        const deltaVw = (deltaX / window.innerWidth) * 100;
+        const newSidebarWidth = startWidthRef.current + deltaVw;
+        const maxSidebarWidth = 50;
+        const minSidebarWidth = 30;
+        
+        // Clamp the value
+        const clampedWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, newSidebarWidth));
+        setSidebarWidth(clampedWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingSidebar(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    if (isResizingLeft || isResizingSidebar) {
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isResizingLeft, isResizingSidebar]);
 
   const leftPanelOpen = externalLeftPanelOpen !== undefined ? externalLeftPanelOpen : internalLeftPanelOpen;
   const setLeftPanelOpen = externalSetLeftPanelOpen || setInternalLeftPanelOpen;
@@ -173,8 +232,9 @@ export default function Sidebar(props: ChatSidebarProps) {
 
             {/* Sidebar */}
             <motion.aside
-              className={`fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70 ${threadHistoryOpen ? "w-[calc(25vw+280px)]" : "w-[25vw]"
-                }`}
+              ref={sidebarRef}
+              className="fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70"
+              style={{ width: threadHistoryOpen ? `calc(${sidebarWidth}vw + 280px)` : `${sidebarWidth}vw` }}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -183,21 +243,60 @@ export default function Sidebar(props: ChatSidebarProps) {
               <AnimatePresence>
                 {leftPanelOpen && (
                   <motion.div
-                    className="absolute right-full top-0 h-full w-[25vw]"
+                    className="absolute right-full top-0 h-full bg-[#0a0a0a] border-r border-zinc-700"
+                    style={{ width: `${leftPanelWidth}vw` }}
                     initial={{ x: "0" }}
                     animate={{ x: 0 }}
                     exit={{ x: "0%" }}
                     transition={{ type: "spring", stiffness: 400, damping: 40 }}
                   >
-                    {leftPanelContent || (
-                      <>
-                        <h3 className="text-lg font-semibold mb-4 text-white">Left Panel</h3>
-                        <p className="text-zinc-300">This is the left extension panel. You can add any content here.</p>
-                      </>
-                    )}
+                    <div className="h-full overflow-auto relative">
+                      {leftPanelContent || (
+                        <>
+                          <h3 className="text-lg font-semibold mb-4 text-white p-4">Left Panel</h3>
+                          <p className="text-zinc-300 p-4">This is the left extension panel. You can add any content here.</p>
+                        </>
+                      )}
+                    </div>
+                    {/* Resize handle for left panel (on left edge) */}
+                    <div
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        startXRef.current = e.clientX;
+                        startWidthRef.current = leftPanelWidth;
+                        setIsResizingLeft(true);
+                      }}
+                      className="absolute left-0 top-0 w-1.5 h-full bg-zinc-700/50 cursor-col-resize transition-colors z-[60] hover:w-2 group"
+                      style={{ touchAction: 'none' }}
+                    >
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-60 group-hover:opacity-100">
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
+              {/* Resize handle for sidebar */}
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  startXRef.current = e.clientX;
+                  startWidthRef.current = sidebarWidth;
+                  setIsResizingSidebar(true);
+                }}
+                className="absolute left-0 top-0 w-1.5 h-full bg-zinc-700/50 cursor-col-resize transition-colors z-[60] hover:w-2 group"
+                style={{ touchAction: 'none' }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-60 group-hover:opacity-100">
+                  <div className="w-1 h-1 rounded-full bg-white"></div>
+                  <div className="w-1 h-1 rounded-full bg-white"></div>
+                  <div className="w-1 h-1 rounded-full bg-white"></div>
+                </div>
+              </div>
               <div className="flex h-full flex-col flex-1">
                 <div className="flex py-3 px-6 justify-between items-center border-b border-zinc-700/30">
                   <div className="flex items-center gap-3">
@@ -265,7 +364,8 @@ export default function Sidebar(props: ChatSidebarProps) {
                     filePreview={filePreview}
                   />
                 </div>
-              </div>              <AnimatePresence>
+              </div>
+              <AnimatePresence>
                 {threadHistoryOpen && (
                   <motion.div
                     className="h-full w-[280px] shadow-2xl border-l border-white/10"
@@ -277,7 +377,8 @@ export default function Sidebar(props: ChatSidebarProps) {
                     <ThreadHistory isSidebar={true} header={{ title: "Sessions" }} onClose={() => setThreadHistoryOpen(false)} />
                   </motion.div>
                 )}
-              </AnimatePresence>            </motion.aside>
+              </AnimatePresence>
+            </motion.aside>
           </>
         )}
       </AnimatePresence>
