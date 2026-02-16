@@ -36,7 +36,7 @@ function App() {
     textToSpeechVoice: {
       apiUrl: "https://whisper.gauravshivaprasad.com/v1/audio/transcriptions",
       apiKey: "sk-UqngFFpeT8V1j6LQh44zGhQU71W14A02VrY2n6K7eT1qsyE5",
-      model: "Systran/faster-whisper-large-v3"
+      model: "Systran/faster-whisper-small"
     }
   });
   return (

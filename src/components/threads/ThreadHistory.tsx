@@ -48,6 +48,11 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
         }
 
         return false;
+    }).sort((a, b) => {
+        // Sort by updated_at in descending order (most recent first)
+        const dateA = new Date(a.updated_at).getTime();
+        const dateB = new Date(b.updated_at).getTime();
+        return dateB - dateA;
     });
 
     return (
@@ -337,7 +342,7 @@ function ThreadList({
                                         <p className="truncate text-ellipsis text-sm text-white/80">{itemText}</p>
                                     </button>
                                     <span className="flex-shrink-0 text-xs text-white/40 ml-2">
-                                        {formatRelativeTime(t.created_at)}
+                                        {formatRelativeTime(t.updated_at)}
                                     </span>
                                 </div>
                             )}
