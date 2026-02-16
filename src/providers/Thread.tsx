@@ -1,4 +1,4 @@
-import { getApiKey, type Thread } from "@langchain/langgraph-sdk";
+import { type Thread } from "@langchain/langgraph-sdk";
 import { createContext, useCallback, useContext, useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { validate } from "uuid";
 import { useChatRuntime } from "./ChatRuntime";
@@ -67,7 +67,7 @@ function getThreadSearchMetadata(
  */
 export function ThreadProvider({ children }: { children: ReactNode }) {
 
-  const { apiUrl, assistantId } = useChatRuntime();
+  const { apiUrl, assistantId, identity } = useChatRuntime();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [threadsLoading, setThreadsLoading] = useState(false);
 
@@ -88,7 +88,12 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
   const getThreads = useCallback(async (): Promise<Thread[]> => {
     if (!apiUrl || !assistantId) return [];
-    const client = createClient(apiUrl, getApiKey("") ?? undefined);
+    if (!identity?.authToken) {
+      console.error("No authToken available for getThreads");
+      return [];
+    }
+    console.log("Fetching threads with authToken:", identity?.authToken);
+    const client = createClient(apiUrl, identity?.authToken ?? undefined);
 
     const threads = await client.threads.search({
       metadata: {
@@ -98,11 +103,15 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     });
 
     return threads;
-  }, [apiUrl, assistantId]);
+  }, [apiUrl, assistantId, identity]);
 
   const deleteThread = useCallback(async (threadIdToDelete: string) => {
     if (!apiUrl) return;
-    const client = createClient(apiUrl, getApiKey("") ?? undefined);
+    if (!identity?.authToken) {
+      console.error("No authToken available for deleteThread");
+      return;
+    }
+    const client = createClient(apiUrl, identity?.authToken ?? undefined);
 
     await client.threads.delete(threadIdToDelete);
 
@@ -113,18 +122,22 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     if (threadId === threadIdToDelete) {
       setThreadId(null);
     }
-  }, [apiUrl, threadId]);
+  }, [apiUrl, threadId, identity]);
 
   const updateThread = useCallback(async (threadIdToUpdate: string, metadata: Record<string, any>) => {
     if (!apiUrl) return;
-    const client = createClient(apiUrl, getApiKey("") ?? undefined);
+    if (!identity?.authToken) {
+      console.error("No authToken available for updateThread");
+      return;
+    }
+    const client = createClient(apiUrl, identity?.authToken ?? undefined);
 
     await client.threads.update(threadIdToUpdate, { metadata });
 
     // Refresh threads to get updated data
     const updatedThreads = await getThreads();
     setThreads(updatedThreads);
-  }, [apiUrl, getThreads]);
+  }, [apiUrl, getThreads, identity]);
 
   return (
     <ThreadContext.Provider
