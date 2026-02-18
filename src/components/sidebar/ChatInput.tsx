@@ -10,12 +10,13 @@ import {
   useRef,
 } from "react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import type { textToSpeechVoice } from "@/types/ChatProps";
 
 export default function ChatInput({
   input,
   inputFileAccept = ".png,.jpg,.jpeg,.pdf,.docx",
   setInput,
-  supportSpeechToText = false,
+  textToSpeechVoice,
   handleSubmit,
   fileInput,
   setFileInput,
@@ -26,7 +27,7 @@ export default function ChatInput({
 }: {
   input: string;
   setInput: (value: string) => void;
-  supportSpeechToText?: boolean;
+  textToSpeechVoice?: textToSpeechVoice;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
   fileInput: FileInfo[];
   setFileInput: Dispatch<SetStateAction<FileInfo[]>>;
@@ -52,7 +53,7 @@ export default function ChatInput({
 
       if (audioBlob) {
         try {
-          const transcribedText = await transcribeAudio(audioBlob);
+          const transcribedText = await transcribeAudio(audioBlob, textToSpeechVoice?.apiKey || "", textToSpeechVoice?.apiUrl || "", textToSpeechVoice?.model || "Systran/faster-whisper-small");
 
           if (transcribedText) {
             setInput(transcribedText);
@@ -207,7 +208,7 @@ export default function ChatInput({
           />
 
           {/* Microphone Button */}
-          {supportSpeechToText && (
+          {textToSpeechVoice?.apiKey && textToSpeechVoice?.apiUrl && textToSpeechVoice?.model && (
             <button
               type="button"
               onClick={handleMicClick}
