@@ -12,8 +12,8 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
-    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps, supportSpeechToText } = chatProps || {};
+export function Chat(chatProps?: ChatUIProps) {
+    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps, textToSpeechVoice } = chatProps || {};
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -27,13 +27,20 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
 
     useEffect(() => {
         // Fetch the agent catalog on component mount
-        fetchCatalog();
-        setAgents(["V3ya_external_agent", "chat_agent"]);
+        const fetchAgents = async () => {
+            const data = await fetchCatalog();
+
+            const agentList = Array.isArray(data?.agents) ? data.agents : [];
+            const agentIds = agentList
+                .map((item: any) => item?.graph_id)
+                .filter((id: any): id is string => typeof id === "string" && id.length > 0);
+            setAgents(agentIds);
+        };
+        fetchAgents();
     }, [fetchCatalog]);
 
     const handleAgentChange = (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
         const selectedAgent = (event.target as HTMLElement).innerText;
-        console.log("Selected agent:", selectedAgent);
         setAssistantId(selectedAgent);
         setIsDropdownOpen(false);
     }
@@ -67,8 +74,6 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
             }
             if (result && result?.contextValues) contextValues = result.contextValues;
         }
-
-        // console.log("Using files for submission:", latestFiles);
 
         const contentBlocks = [
             ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
@@ -166,7 +171,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                             </h1>
 
                             <div className="w-full max-w-2xl px-4">
-                                <ChatInput input={input} setInput={setInput} supportSpeechToText={supportSpeechToText} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
+                                <ChatInput input={input} setInput={setInput} textToSpeechVoice={textToSpeechVoice} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                             </div>
                         </div> :
                         // =========================
@@ -183,7 +188,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                             </div>
                             <div className="border-t border-white/10 p-1">
                                 <div className="mx-auto max-w-3xl">
-                                    <ChatInput input={input} setInput={setInput} supportSpeechToText={supportSpeechToText} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
+                                    <ChatInput input={input} setInput={setInput} textToSpeechVoice={textToSpeechVoice} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                                 </div>
                             </div>
                         </div>

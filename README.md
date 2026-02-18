@@ -67,14 +67,13 @@ function App() {
       identity={{
         user_id: "user123",
         org_id: "org456",
-        textToSpeechVoice: {
+      }}
+    >
+      <Sidebar textToSpeechVoice={{
           apiUrl: "https://domain_url.com/v1/audio/transcriptions",
           apiKey: "your-api-key",
           model: "Systran/faster-whisper-large-v3"
-        }
-      }}
-    >
-      <Sidebar supportSpeechToText={true}/>
+        }}/>
     </ChatRuntimeProvider>
   );
 }
