@@ -92,7 +92,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       console.error("No authToken available for getThreads");
       return [];
     }
-    console.log("Fetching threads with authToken:", identity?.authToken);
+    // console.log("Fetching threads with authToken:", identity?.authToken);
     const client = createClient(apiUrl, identity?.authToken ?? undefined);
 
     const threads = await client.threads.search({
@@ -102,7 +102,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       limit: 100,
     });
 
-    return threads;
+    return Array.isArray(threads) ? threads : [];
   }, [apiUrl, assistantId, identity]);
 
   const deleteThread = useCallback(async (threadIdToDelete: string) => {

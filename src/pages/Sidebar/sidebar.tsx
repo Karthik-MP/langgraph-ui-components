@@ -44,13 +44,13 @@ import ChatInput from "../../components/sidebar/ChatInput";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, supportSpeechToText = false } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, textToSpeechVoice } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
   const [threadHistoryOpen, setThreadHistoryOpen] = useState(false);
   const { fileInput, setFileInput } = useFileProvider();
-  
+
   // Resize state
   const [leftPanelWidth, setLeftPanelWidth] = useState(30); // in vw
   const [sidebarWidth, setSidebarWidth] = useState(30); // in vw
@@ -72,7 +72,7 @@ export default function Sidebar(props: ChatSidebarProps) {
         const newLeftPanelWidth = startWidthRef.current + deltaVw;
         const maxLeftPanelWidth = 40;
         const minLeftPanelWidth = 30;
-        
+
         // Clamp the value
         const clampedWidth = Math.max(minLeftPanelWidth, Math.min(maxLeftPanelWidth, newLeftPanelWidth));
         setLeftPanelWidth(clampedWidth);
@@ -84,7 +84,7 @@ export default function Sidebar(props: ChatSidebarProps) {
         const newSidebarWidth = startWidthRef.current + deltaVw;
         const maxSidebarWidth = 50;
         const minSidebarWidth = 30;
-        
+
         // Clamp the value
         const clampedWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, newSidebarWidth));
         setSidebarWidth(clampedWidth);
@@ -354,7 +354,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                     input={input}
                     inputFileAccept={inputFileAccept}
                     setInput={setInput}
-                    supportSpeechToText={supportSpeechToText}
+                    textToSpeechVoice={textToSpeechVoice}
                     handleSubmit={defaultHandleSubmit}
                     isLoading={isLoading}
                     fileInput={fileInput}
