@@ -16,14 +16,21 @@ export interface CallThisOnSubmitResponse {
     contextValues?: Record<string, any>;
 }
 
-interface ChatProps {
+export interface textToSpeechVoice {
+    apiUrl: string;
+    apiKey: string;
+    model: string;
+}
+
+export interface ChatProps {
     inputFileAccept?: string;
     enableToolCallIndicator?: boolean;
     handleFileSelect?: (e: FormEvent) => void;
     callThisOnSubmit?: () => Promise<CallThisOnSubmitResponse | void>;
     header?: headerProps;
     chatBodyProps?: chatBodyProps;
-    supportSpeechToText?: boolean;
+    /** Optional text-to-speech voice configuration */
+    textToSpeechVoice?: textToSpeechVoice;
 }
 
 export interface ChatSidebarProps extends ChatProps {
