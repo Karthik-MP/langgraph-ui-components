@@ -1,7 +1,11 @@
 /* @refresh reset */
 import { useChatRuntime } from "@/providers/ChatRuntime";
 import { logger } from "@/utils/logger";
-import { type Message } from "@langchain/langgraph-sdk";
+import { type AIMessage, type Message } from "@langchain/langgraph-sdk";
+
+// Derive the tool-call types from AIMessage since the SDK doesn't re-export them
+type ToolCall = NonNullable<AIMessage["tool_calls"]>[number];
+type InvalidToolCall = NonNullable<AIMessage["invalid_tool_calls"]>[number];
 import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
 import {
   isRemoveUIMessage,
@@ -42,7 +46,7 @@ const useTypedStream = useStream<
 
 type StreamContextType = UseStream<StateType, {
   UpdateType: {
-    
+
     messages?: Message[] | Message | string;
     ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
   };
@@ -58,9 +62,9 @@ type StreamContextType = UseStream<StateType, {
       /** If true, message is hidden from user UI */
       hidden?: boolean;
       /** Tool calls associated with this message */
-      tool_calls?: any[];
+      tool_calls?: ToolCall[];
       /** Invalid tool calls associated with this message */
-      invalid_tool_calls?: any[];
+      invalid_tool_calls?: InvalidToolCall[];
       /** If provided, use this ID for the message instead of generating one */
       tool_call_id?: string;
       /** Additional kwargs to attach to the message */
@@ -70,7 +74,7 @@ type StreamContextType = UseStream<StateType, {
       /** Custom ID for the message (will also be used for UI components) */
       id?: string;
       /** Custom context to override/merge with identity */
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
     }
   ) => Promise<void>;
   submitMessage: (
@@ -79,11 +83,11 @@ type StreamContextType = UseStream<StateType, {
       streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
       streamSubgraphs?: boolean;
       streamResumable?: boolean;
-      contextValues?: any;
+      contextValues?: Record<string, unknown>;
     }
   ) => Promise<void>;
   regenerateMessage: (messageId: string) => Promise<void>;
-  fetchCatalog: () => Promise<any | null>;
+  fetchCatalog: () => Promise<unknown>;
 };
 
 const StreamContext = createContext<StreamContextType | undefined>(undefined);
@@ -95,7 +99,7 @@ async function checkGraphStatus(apiUrl: string, authToken: string | null | undef
     });
     return res.ok;
   } catch {
-    console.error("Failed to intialize LangGraph Agent");
+    logger.error("Failed to initialize LangGraph Agent");
   }
 }
 
@@ -111,7 +115,7 @@ async function fetchCatalog(apiUrl: string, authToken: string | null | undefined
     return null;
   }
   catch {
-    console.error("Failed to fetch LangGraph Catalog");
+    logger.error("Failed to fetch LangGraph Catalog");
     return null;
   }
 }
@@ -130,7 +134,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
   const [localUI, setLocalUI] = useState<UIMessage[]>([]);
   // Track if catalog has been fetched to prevent duplicate calls
   const [catalogFetched, setCatalogFetched] = useState(false);
-  const [catalogCache, setCatalogCache] = useState<any | null>(null);
+  const [catalogCache, setCatalogCache] = useState<unknown>(null);
 
   const streamValue = useTypedStream({
     apiUrl,
@@ -160,7 +164,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         setThreadId(id);
         // Refetch threads list when thread ID changes.
         // Wait for some seconds before fetching so we're able to get the new thread that was created.
-        sleep().then(() => getThreads().then(setThreads).catch(console.error));
+        sleep().then(() => getThreads().then(setThreads).catch((err) => logger.error("Failed to refresh threads:", err)));
       }
     },
   });
@@ -177,13 +181,13 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         type?: Message["type"];
         name?: string;
         hidden?: boolean;
-        tool_calls?: any[];
-        invalid_tool_calls?: any[];
+        tool_calls?: ToolCall[];
+        invalid_tool_calls?: InvalidToolCall[];
         tool_call_id?: string;
         additional_kwargs?: Record<string, unknown>;
         ui?: UIMessage[];
         id?: string; // Allow passing custom ID
-        context?: Record<string, any>; // Allow passing custom context to override identity
+        context?: Record<string, unknown>; // Allow passing custom context to override identity
       }
     ) => {
       // Use provided ID or generate new one
@@ -219,20 +223,21 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
             }),
           };
 
-      // console.log("Sending message via sendMessage:", messageObj);
+      // console.log("Sending message via sendMessage:", messageObj); → converted to debug log
+      logger.debug("Sending message via sendMessage:", messageObj);
 
       // If message type is "ai", just append to local state without submitting to agent
       // This is useful for injecting initial messages or system messages that don't need agent processing
       if (options?.type === "ai") {
         setLocalMessages((prev) => [...prev, messageObj]);
-        // console.log("Appended AI message to localMessages:", options?.ui)
+        logger.debug("Appended AI message to localMessages:", options?.ui);
         // Also store any UI components, linking them to the message id
         if (options.ui && options.ui.length > 0) {
           const uiWithMessageId = options.ui.map((ui, index) => ({
             ...ui,
             id: messageId, // Link to the message ID so CustomComponentRender can find it
             // Ensure each UI component has a unique identifier for React keys
-            _key: (ui as any)._key || `${messageId}-ui-${index}`,
+            _key: (ui as UIMessage & { _key?: string })._key || `${messageId}-ui-${index}`,
           })) as UIMessage[];
           setLocalUI((prev) => [...prev, ...uiWithMessageId]);
         }
@@ -242,14 +247,14 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       // For non-AI messages, submit to the agent
       const currentMessages = streamValue.messages || [];
       // Merge identity with custom context, custom context takes precedence
-      const mergedContext = options?.context 
+      const mergedContext = options?.context
         ? { ...identity, ...options.context, ...configuration }
         : identity || {};
-      
+
       await streamValue.submit(
-        { messages: [...currentMessages, messageObj] }, 
+        { messages: [...currentMessages, messageObj] },
         {
-          context: mergedContext, 
+          context: mergedContext,
         }
       );
     },
@@ -271,12 +276,12 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
 
   // Combine local UI with stream UI, deduplicating by unique key
   const combinedUI = useMemo(() => {
-    // console.log("Combining local UI with stream UI:", localUI, streamValue.values?.ui);
+    logger.debug("Combining local UI with stream UI:", localUI, streamValue.values?.ui);
     const allUI = [...localUI, ...(streamValue.values?.ui || [])];
     // Deduplicate by _key or id+name combination
     const seen = new Set<string>();
     return allUI.filter(ui => {
-      const key = (ui as any)._key || `${ui.id}-${ui.name}`;
+      const key = (ui as UIMessage & { _key?: string })._key || `${ui.id}-${ui.name}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -290,7 +295,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         streamMode?: ("values" | "updates" | "messages" | "custom" | "debug")[];
         streamSubgraphs?: boolean;
         streamResumable?: boolean;
-        contextValues?: any;
+        contextValues?: Record<string, unknown>;
       }
     ) => {
       // Get ALL current messages (including local AI messages)
@@ -299,7 +304,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       await streamValue.submit(
         { messages: [...allCurrentMessages, message] },
         {
-          context: {...identity, ...options?.contextValues},
+          context: { ...identity, ...options?.contextValues },
           streamMode: options?.streamMode || ["values"],
           streamSubgraphs: options?.streamSubgraphs ?? true,
           streamResumable: options?.streamResumable ?? true,
@@ -321,9 +326,9 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     async (messageId: string) => {
       const allMessages = combinedMessages || [];
       const messageIndex = allMessages.findIndex((msg) => msg.id === messageId);
-      
+
       if (messageIndex === -1) {
-        console.error("Message not found:", messageId);
+        logger.error("Message not found for regeneration:", messageId);
         return;
       }
 
@@ -334,19 +339,19 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       }
 
       if (lastHumanIndex === -1) {
-        console.error("No human message found before AI message");
+        logger.error("No human message found before AI message:", messageId);
         return;
       }
 
       // Get all messages up to and including the last human message
       const messagesToKeep = allMessages.slice(0, lastHumanIndex + 1);
-      
+
       // Remove the last human message from the list since we'll resubmit it
       const messagesBeforeHuman = messagesToKeep.slice(0, -1);
       const humanMessage = messagesToKeep[messagesToKeep.length - 1];
 
       // Clear local messages that came after the human message
-      setLocalMessages((prev) => 
+      setLocalMessages((prev) =>
         prev.filter((msg) => {
           const msgIndex = allMessages.findIndex((m) => m.id === msg.id);
           return msgIndex < lastHumanIndex;
@@ -390,7 +395,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     if (catalogFetched && catalogCache !== null) {
       return catalogCache;
     }
-    
+
     // Fetch catalog only once
     if (!catalogFetched) {
       setCatalogFetched(true);
@@ -398,7 +403,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       setCatalogCache(data);
       return data;
     }
-    
+
     return catalogCache;
   }, [apiUrl, identity?.authToken, catalogFetched, catalogCache]);
 

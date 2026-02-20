@@ -1,5 +1,6 @@
 import { useChatRuntime } from "@/providers/ChatRuntime";
 import { useState, useEffect, useCallback } from "react";
+
 export interface ModelOption {
     id: string;
     name: string;
@@ -7,12 +8,23 @@ export interface ModelOption {
 
 const STORAGE_KEY = "agent-chat:selected-model";
 
+// Safe localStorage wrapper — no-ops in SSR environments (Next.js App Router, Remix, etc.)
+const safeStorage = {
+  get: (key: string): string | null => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(key);
+  },
+  set: (key: string, value: string): void => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(key, value);
+  },
+};
+
 export function useModels() {
     const { apiUrl, identity } = useChatRuntime();
     const [models, setModels] = useState<ModelOption[]>([]);
     const [selectedModel, setSelectedModelState] = useState<string>(() => {
-        if (typeof window === "undefined") return "";
-        return localStorage.getItem(STORAGE_KEY) ?? "";
+        return safeStorage.get(STORAGE_KEY) ?? "";
     });
     const [loading, setLoading] = useState(false);
 
@@ -34,7 +46,7 @@ export function useModels() {
             setModels(list);
             if (list.length > 0 && !list.find((m) => m.id === selectedModel)) {
                 setSelectedModelState(list[0].id);
-                localStorage.setItem(STORAGE_KEY, list[0].id);
+                safeStorage.set(STORAGE_KEY, list[0].id);
             }
         } catch {
             // silent
@@ -49,7 +61,7 @@ export function useModels() {
 
     const setSelectedModel = (id: string) => {
         setSelectedModelState(id);
-        localStorage.setItem(STORAGE_KEY, id);
+        safeStorage.set(STORAGE_KEY, id);
     };
 
     return { models, selectedModel, setSelectedModel, loading };

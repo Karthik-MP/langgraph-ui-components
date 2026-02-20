@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 
-interface CustomComponentContextValue {
+export interface CustomComponentContextValue {
   components: Record<string, React.FunctionComponent | React.ComponentClass>;
   registerComponent: (
     name: string,
