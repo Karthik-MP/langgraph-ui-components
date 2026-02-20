@@ -3,28 +3,36 @@
   "private": false,
   "version": "0.0.19",
   "type": "module",
-  "main": "./dist/index.es.js",
+  "main": "./dist/index.cjs.js",
   "module": "./dist/index.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.es.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.es.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs.js"
+      }
     },
     "./styles.css": "./dist/styles.css"
   },
   "files": [
     "dist",
+    "src",
     "README.md"
   ],
   "scripts": {
     "dev": "vite",
-    "build:css": "cp dist/langgraph-ui-components.css dist/styles.css",
-    "build:js": "tsc -p tsconfig.build.json && vite build",
+    "build:css": "cp dist/assets/*.css dist/styles.css 2>/dev/null || true",
+    "build:js": "vite build",
     "build": "pnpm run build:js && pnpm run build:css",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "type-check": "tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-hover-card": "^1.1.15",
@@ -87,6 +95,13 @@
     "sonner": "^2.0.7",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

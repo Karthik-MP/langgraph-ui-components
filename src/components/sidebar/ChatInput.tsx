@@ -1,6 +1,6 @@
 import type { FileInfo } from "@/types/fileInput";
 import { MoveUp, Paperclip, Loader2, Mic, Square, ChevronDown, Check } from "lucide-react";
-import {
+import React, {
   type ChangeEvent,
   type Dispatch,
   type FormEvent,
@@ -10,6 +10,7 @@ import {
   useRef,
   useEffect,
 } from "react";
+import { createPortal } from "react-dom";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import type { textToSpeechVoice } from "@/types/ChatProps";
 import { useModels } from "@/hooks/use-models";
@@ -294,18 +295,41 @@ function DropdownSelector<T extends { id: string; label: string }>({
   dropDown?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (
+        buttonRef.current && !buttonRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    if (dropDown) {
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    } else {
+      setMenuStyle({
+        position: "fixed",
+        bottom: window.innerHeight - rect.top + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [open, dropDown]);
 
   const selectedItem = items.find((i) => i.id === selected);
   const fullLabel = selectedItem?.label || placeholder;
@@ -315,8 +339,9 @@ function DropdownSelector<T extends { id: string; label: string }>({
       : fullLabel;
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((p) => !p)}
         className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -326,12 +351,12 @@ function DropdownSelector<T extends { id: string; label: string }>({
         </span>
         <ChevronDown className={cn("size-3 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
-      {open && (
-        <div className={cn(
-          "absolute z-50 min-w-55 max-h-77 overflow-y-auto rounded-xl border bg-popover p-1 shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-track]:bg-transparent",
-          dropDown ? "right-0 top-full mt-1" : "right-0 bottom-full mb-1",
-        )}>
-          <div className="h-0" />
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={menuStyle}
+          className="z-9999 min-w-55 max-h-77 overflow-y-auto rounded-xl border bg-popover p-1 shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-track]:bg-transparent"
+        >
           {items.map((item) => (
             <button
               key={item.id}
@@ -349,7 +374,8 @@ function DropdownSelector<T extends { id: string; label: string }>({
               {item.id === selected && <Check className="size-4 shrink-0 text-primary" />}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

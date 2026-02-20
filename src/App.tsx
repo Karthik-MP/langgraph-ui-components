@@ -27,8 +27,8 @@ function ChatWrapper({ children }: { children?: React.ReactNode }) {
   }
 
   return (<>
-    <Sidebar supportChatHistory={true} textToSpeechVoice={textToSpeechVoice} />
-    {/* <Chat textToSpeechVoice={textToSpeechVoice} /> */}
+    {/* <Sidebar supportChatHistory={true} textToSpeechVoice={textToSpeechVoice} /> */}
+    <Chat textToSpeechVoice={textToSpeechVoice} />
     {children}
   </>
   )
