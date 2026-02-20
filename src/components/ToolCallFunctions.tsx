@@ -1,15 +1,19 @@
 import { getContentString } from "@/utils/utils";
-import type { Message } from "@langchain/langgraph-sdk";
+import type { AIMessage, Message } from "@langchain/langgraph-sdk";
 import React, { useState } from "react";
 
-function ToolCallFunctions({ title, toolMessages }: {
+function ToolCallFunctions({ title, toolMessages, toolCalls }: {
   title?: string;
   toolMessages: Message[];
+  toolCalls?: AIMessage["tool_calls"];
 }) {
   const [open, setOpen] = useState(false);
 
-  // Only render if there are tool messages
-  if (!toolMessages || toolMessages.length === 0) return null;
+  const hasToolMessages = !!toolMessages && toolMessages.length > 0;
+  const hasToolCalls = !!toolCalls && toolCalls.length > 0;
+
+  // Only render if there are tool messages or tool calls
+  if (!hasToolMessages && !hasToolCalls) return null;
 
   return (
     <div
@@ -53,9 +57,17 @@ function ToolCallFunctions({ title, toolMessages }: {
         aria-labelledby="accordion-collapse-heading-1"
       >
         <div className="md:p-5 text-left space-y-3">
-          {toolMessages.map((toolMsg) => (
+          {hasToolMessages && toolMessages.map((toolMsg) => (
             <div key={toolMsg.id} className="border-zinc-700">
               <p className="text-body text-sm">{toolMsg.content ? getContentString(toolMsg.content) : ""}</p>
+            </div>
+          ))}
+          {!hasToolMessages && hasToolCalls && toolCalls?.map((toolCall) => (
+            <div key={toolCall.id ?? toolCall.name} className="border-zinc-700">
+              <p className="text-body text-sm font-medium">{toolCall.name}</p>
+              <pre className="text-xs text-zinc-400 whitespace-pre-wrap mt-1">
+                {JSON.stringify(toolCall.args ?? {}, null, 2)}
+              </pre>
             </div>
           ))}
         </div>
