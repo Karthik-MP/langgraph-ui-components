@@ -13,7 +13,7 @@ export type ChatIdentity = {
   /** Optional organization identifier */
   org_id?: string | null;
   /** Allow additional custom identity fields */
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 /**
