@@ -1,7 +1,9 @@
+import { parsePartialJson } from "@langchain/core/output_parsers";
 import { useStreamContext } from "@/providers/Stream";
 import type { chatBodyProps } from "@/types/ChatProps";
 import { logger } from "@/utils/logger";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
+import type { AIMessage, Message } from "@langchain/langgraph-sdk";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
@@ -56,6 +58,34 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
   const handleBranchSelect = useCallback((branch: string) => {
     stream.setBranch(branch);
   }, [stream]);
+
+  const getToolCallsFromContent = useCallback((content: Message["content"]): AIMessage["tool_calls"] => {
+    if (!Array.isArray(content)) return [];
+    const toolCallContents = content.filter(
+      (c) => typeof c === "object" && c !== null && (c as any).type === "tool_use" && (c as any).id,
+    ) as Array<Record<string, any>>;
+
+    return toolCallContents.map((tc) => {
+      let args: Record<string, any> = {};
+      if (tc?.input) {
+        if (typeof tc.input === "string") {
+          try {
+            args = parsePartialJson(tc.input) ?? {};
+          } catch {
+            args = {};
+          }
+        } else if (typeof tc.input === "object") {
+          args = tc.input as Record<string, any>;
+        }
+      }
+      return {
+        name: tc.name ?? "",
+        id: tc.id ?? "",
+        args,
+        type: "tool_call",
+      };
+    });
+  }, []);
 
   // Get the parent scroll container
   const getScrollContainer = useCallback(() => {
@@ -150,6 +180,13 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       .filter(Boolean)
       .join("\n\n");
 
+    const toolCallsFromContent = groupedMessages
+      .flatMap((m) => {
+        const calls = getToolCallsFromContent(m.content);
+        return calls || [];
+      })
+      .filter((tc): tc is NonNullable<typeof tc> => tc != null && tc !== undefined);
+
     // Create a combined message object
     const combinedMessage = {
       ...msg,
@@ -164,7 +201,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     const isStreamingThisMessage = isLoading && isLastMessageGroup;
 
     // Check if the first message in the group has tool calls
-    const hasToolCalls = isAiWithToolCalls(msg);
+    const hasToolCalls = isAiWithToolCalls(msg) || toolCallsFromContent.length > 0;
 
     // Show thinking if streaming and no content yet (only tool calls exist)
     const showThinkingIndicator = isStreamingThisMessage && !displayContent && hasToolCalls;
@@ -175,10 +212,11 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
         {showThinkingIndicator && enableToolCallIndicator && (
           <Thinking />
         )}
-        {toolMessages.length > 0 && enableToolCallIndicator && hasToolCalls && (
+        {enableToolCallIndicator && hasToolCalls && (
           <ToolCallFunctions
             title="Agent Thinking"
             toolMessages={toolMessages}
+            toolCalls={toolCallsFromContent}
           />
         )}
         {/* 2. Agent message (combined content) */}
@@ -286,7 +324,14 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     >
       {memoMessages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-zinc-500">
-          Start a conversation...
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin h-5 w-5 border-2 border-zinc-500 border-t-transparent rounded-full" />
+              <span>Loading conversation...</span>
+            </div>
+          ) : (
+            "Start a conversation..."
+          )}
         </div>
       ) : (
         <>

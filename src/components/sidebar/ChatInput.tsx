@@ -1,5 +1,5 @@
 import type { FileInfo } from "@/types/fileInput";
-import { MoveUp, Paperclip, Loader2, Mic, Square } from "lucide-react";
+import { MoveUp, Paperclip, Loader2, Mic, Square, ChevronDown, Check } from "lucide-react";
 import {
   type ChangeEvent,
   type Dispatch,
@@ -8,9 +8,12 @@ import {
   useState,
   type DragEvent,
   useRef,
+  useEffect,
 } from "react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import type { textToSpeechVoice } from "@/types/ChatProps";
+import { useModels } from "@/hooks/use-models";
+import { cn } from "@/utils/tailwindUtil";
 
 export default function ChatInput({
   input,
@@ -42,6 +45,9 @@ export default function ChatInput({
 
   const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { models, selectedModel, setSelectedModel } = useModels();
+  const modelItems = models.map((m) => ({ id: m.id, label: m.name || m.id }));
 
   // Audio recording and transcription
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, transcribeAudio } = useAudioRecorder();
@@ -214,8 +220,8 @@ export default function ChatInput({
               onClick={handleMicClick}
               disabled={isLoading || isTranscribing}
               className={`${isRecording
-                  ? "text-red-500 hover:bg-red-900/20"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                ? "text-red-500 hover:bg-red-900/20"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
                 } rounded p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
               title={isRecording ? `Recording... ${recordingTime}s` : "Record audio"}
             >
@@ -230,6 +236,16 @@ export default function ChatInput({
               <Loader2 size={14} className="animate-spin" />
               Transcribing...
             </span>
+          )}
+
+          {modelItems.length > 1 && (
+            <DropdownSelector
+              items={modelItems}
+              selected={selectedModel}
+              onSelect={setSelectedModel}
+              placeholder="Model"
+              maxWidth={160}
+            />
           )}
 
           {isLoading && onCancel && (
@@ -257,5 +273,84 @@ export default function ChatInput({
         </div>
       </div>
     </form>
+  );
+}
+
+function DropdownSelector<T extends { id: string; label: string }>({
+  items,
+  selected,
+  onSelect,
+  placeholder,
+  maxWidth = 160,
+  maxLength = 20,
+  dropDown = false,
+}: {
+  items: T[];
+  selected: string;
+  onSelect: (id: string) => void;
+  placeholder: string;
+  maxWidth?: number;
+  maxLength?: number;
+  dropDown?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selectedItem = items.find((i) => i.id === selected);
+  const fullLabel = selectedItem?.label || placeholder;
+  const displayLabel =
+    fullLabel.length > maxLength
+      ? `${fullLabel.slice(0, Math.max(0, maxLength - 1))}…`
+      : fullLabel;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <span className="truncate" style={{ maxWidth }} title={fullLabel}>
+          {displayLabel}
+        </span>
+        <ChevronDown className={cn("size-3 shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className={cn(
+          "absolute z-50 min-w-55 max-h-77 overflow-y-auto rounded-xl border bg-popover p-1 shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-track]:bg-transparent",
+          dropDown ? "right-0 top-full mt-1" : "right-0 bottom-full mb-1",
+        )}>
+          <div className="h-0" />
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onSelect(item.id);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent",
+                item.id === selected && "bg-accent/50 font-medium",
+              )}
+            >
+              <span className="truncate">{item.label}</span>
+              {item.id === selected && <Check className="size-4 shrink-0 text-primary" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
