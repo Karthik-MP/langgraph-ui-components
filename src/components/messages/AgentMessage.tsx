@@ -1,10 +1,145 @@
+import { cn } from "@/utils/tailwindUtil";
 import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
-import { BotMessageSquare, Loader2 } from "lucide-react";
-import React from "react";
+import { BotMessageSquare, ChevronRight, Loader2, LoaderCircle, Sparkles } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { AgentMarkdown } from "../ui/AgentMarkdown";
 import { BranchSwitcher } from "./BranchSwitcher";
 import { MessageActions, type MessageFeedback } from "./MessageActions";
+
+function getReasoningFromKwargs(message: Message | undefined): string | null {
+  if (!message) return null;
+  const ak = (message as Record<string, unknown>).additional_kwargs as
+    | Record<string, unknown>
+    | undefined;
+  if (
+    ak &&
+    typeof ak.reasoning_content === "string" &&
+    ak.reasoning_content.length > 0
+  ) {
+    return ak.reasoning_content;
+  }
+  return null;
+}
+
+function InlineThinking({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(!!isStreaming);
+  }, [isStreaming]);
+
+  return (
+    <div className="my-1">
+      <button
+        type="button"
+        onClick={() => setExpanded((p) => !p)}
+        className="inline-flex items-center gap-1.5 text-xs text-zinc-400/80 transition-colors hover:text-zinc-300"
+      >
+        {isStreaming ? (
+          <LoaderCircle className="size-3 animate-spin" />
+        ) : (
+          <Sparkles className="size-3" />
+        )}
+        <span>{isStreaming ? "Thinking" : "Thought"}</span>
+        <ChevronRight
+          className={cn(
+            "size-3 transition-transform duration-200",
+            expanded && "rotate-90",
+          )}
+        />
+      </button>
+      {expanded && (
+        <div className="mt-1.5 border-l-2 border-white/10 pl-4 text-sm text-zinc-300">
+          <AgentMarkdown>{text}</AgentMarkdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderContentInline(message: Message | undefined, isActivelyStreaming?: boolean) {
+  if (!message) return null;
+  const content = message.content;
+  const parts: React.ReactNode[] = [];
+
+  const kwargsReasoning = getReasoningFromKwargs(message);
+  if (kwargsReasoning) {
+    const hasTextContent =
+      typeof content === "string"
+        ? content.length > 0
+        : Array.isArray(content) &&
+          (content as Record<string, unknown>[]).some(
+            (b) =>
+              b.type === "text" &&
+              typeof b.text === "string" &&
+              (b.text as string).length > 0,
+          );
+    parts.push(
+      <InlineThinking
+        key="kwargs-reasoning"
+        text={kwargsReasoning}
+        isStreaming={isActivelyStreaming && !hasTextContent}
+      />,
+    );
+  }
+
+  if (typeof content === "string") {
+    if (content.length > 0) {
+      parts.push(
+        <div key="text-content" className="py-1">
+          <AgentMarkdown>{content}</AgentMarkdown>
+        </div>,
+      );
+    }
+    return parts.length > 0 ? <>{parts}</> : null;
+  }
+
+  if (!Array.isArray(content)) return null;
+
+  const blocks = content as Record<string, unknown>[];
+  let textAccum = "";
+  let idx = 0;
+
+  const flushText = () => {
+    if (textAccum.length > 0) {
+      parts.push(
+        <div key={`text-${idx}`} className="py-1">
+          <AgentMarkdown>{textAccum}</AgentMarkdown>
+        </div>,
+      );
+      textAccum = "";
+      idx++;
+    }
+  };
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (block.type === "text" && typeof block.text === "string") {
+      textAccum += block.text;
+    } else if (
+      (block.type === "reasoning" && typeof block.reasoning === "string") ||
+      (block.type === "thinking" && typeof block.thinking === "string")
+    ) {
+      flushText();
+      const text = (block.reasoning ?? block.thinking) as string;
+      const hasTextAfter = blocks.slice(i + 1).some(
+        (b) =>
+          b.type === "text" &&
+          typeof b.text === "string" &&
+          (b.text as string).length > 0,
+      );
+      const isThisBlockStreaming = isActivelyStreaming && !hasTextAfter;
+      parts.push(
+        <InlineThinking key={`thinking-${idx}`} text={text} isStreaming={isThisBlockStreaming} />,
+      );
+      idx++;
+    }
+  }
+
+  flushText();
+  return parts.length > 0 ? <>{parts}</> : null;
+}
 
 function AgentMessage({
   agentName,
@@ -28,9 +163,10 @@ function AgentMessage({
   onBranchSelect?: (branch: string) => void;
 }) {
   const content = getContentString(message?.content);
+  const inlineContent = renderContentInline(message, isStreaming);
 
   return (
-    <div className="flex flex-col gap-1 w-full group">
+    <div className="agent-message flex flex-col gap-1 w-full group">
       <div className="flex items-center gap-3 w-full">
         <div
           className="rounded-full size-8 shrink-0 bg-zinc-800 flex items-center justify-center p-2"
@@ -41,8 +177,10 @@ function AgentMessage({
         <span className="text-zinc-500 text-sm">{agentName || "Agent"}</span>
       </div>
       <div className="flex flex-1 flex-col gap-1 items-start min-w-0">
-        <div className="text-sm font-normal leading-relaxed px-2 text-left text-zinc-200 shadow-sm max-w-full break-words overflow-wrap-anywhere markdown-content">
-          {content ? (<AgentMarkdown content={content} />) : (
+        <div className="text-content text-foreground">
+          {inlineContent ? (
+            inlineContent
+          ) : (
             <>
               <div className="flex items-center gap-2 text-zinc-500">
                 <Loader2 className="animate-spin" size={16} />
