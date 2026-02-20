@@ -8,6 +8,7 @@ import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
 import type { ChatUIProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
+import { buildContentBlocks, readFilesAsBase64 } from "@/utils/submitUtils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
@@ -28,12 +29,12 @@ export function Chat(chatProps?: ChatUIProps) {
     useEffect(() => {
         // Fetch the agent catalog on component mount
         const fetchAgents = async () => {
-            const data = await fetchCatalog();
+            const data = await fetchCatalog() as { agents?: { graph_id?: string }[] } | null;
 
             const agentList = Array.isArray(data?.agents) ? data.agents : [];
             const agentIds = agentList
-                .map((item: any) => item?.graph_id)
-                .filter((id: any): id is string => typeof id === "string" && id.length > 0);
+                .map((item) => item?.graph_id)
+                .filter((id): id is string => typeof id === "string" && id.length > 0);
             setAgents(agentIds);
         };
         fetchAgents();
@@ -69,7 +70,7 @@ export function Chat(chatProps?: ChatUIProps) {
             return;
 
         let latestFiles: FileInfo[] = fileInput;
-        let contextValues: Record<string, any> | undefined = undefined;
+        let contextValues: Record<string, unknown> | undefined = undefined;
         if (callThisOnSubmit) {
             const result = await callThisOnSubmit();
             if (Array.isArray(result?.files) && result.files.length > 0) {
@@ -78,14 +79,7 @@ export function Chat(chatProps?: ChatUIProps) {
             if (result && result?.contextValues) contextValues = result.contextValues;
         }
 
-        const contentBlocks = [
-            ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-            ...latestFiles.map((file) => ({
-                type: "document" as const,
-                ...file,
-                cache_control: { type: "ephemeral" as const },
-            })),
-        ] as unknown as Message["content"];
+        const contentBlocks = buildContentBlocks(input, latestFiles);
 
         const newHumanMessage: Message = {
             id: uuidv4(),
@@ -106,28 +100,7 @@ export function Chat(chatProps?: ChatUIProps) {
     ) => {
         const files = event.target.files;
         if (!files) return;
-
-        const fileDetails: FileInfo[] = await Promise.all(
-            Array.from(files).map(async (file) => {
-                const base64Data = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const result = reader.result as string;
-                        resolve(result.split(",")[1]);
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-
-                return {
-                    fileName: file.name,
-                    fileType: file.type,
-                    file: file,
-                    fileData: base64Data, // Add this to your FileInfo type
-                };
-            })
-        );
-
+        const fileDetails = await readFilesAsBase64(files);
         setFileInput((prevFile) => [...prevFile, ...fileDetails]);
     };
 

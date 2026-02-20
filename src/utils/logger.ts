@@ -1,5 +1,6 @@
 // logger.ts
-const isProd = import.meta.env.VITE_ENV === 'production';
+const isProd =
+  (typeof import.meta !== "undefined" && (import.meta as { env?: { MODE?: string } }).env?.MODE === "production");
 
 const LOG_LEVELS = {
   DEBUG: 0,

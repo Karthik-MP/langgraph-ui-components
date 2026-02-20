@@ -6,6 +6,7 @@ import { useThread } from "@/providers/Thread";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
 import { logger } from "@/utils/logger";
+import { buildContentBlocks, readFilesAsBase64 } from "@/utils/submitUtils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, PanelLeft, ScanEye, EyeOff } from "lucide-react";
@@ -139,7 +140,7 @@ export default function Sidebar(props: ChatSidebarProps) {
 
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
-    let contextValues: Record<string, any> | undefined = undefined;
+    let contextValues: Record<string, unknown> | undefined = undefined;
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
       if (Array.isArray(result?.files) && result.files.length > 0) {
@@ -148,29 +149,10 @@ export default function Sidebar(props: ChatSidebarProps) {
       if (result && result?.contextValues) contextValues = result.contextValues;
     }
     logger.debug("Using files for submission:", latestFiles);
-    // Create content blocks based on upload type
-    let contentBlocks: any;
-    if (s3_upload) {
-      // For S3 uploads, send the text input (if any) as a text block
-      // and include each uploaded file as a separate `document` block.
-      contentBlocks = [
-        ...(input.trim().length > 0 ? [{ type: "text", text: input.trim() }] : []),
-        ...latestFiles.map((file) => ({
-          type: "document" as const,
-          source: { filename: file.fileName, filetype: file.fileType },
-        })),
-      ];
-    } else {
-      contentBlocks = [
-        ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-        ...latestFiles.map((file) => ({
-          type: "document" as const,
-          ...file,
-          cache_control: { type: "ephemeral" as const },
-        })),
-      ];
-    }
+
+    const contentBlocks = buildContentBlocks(input, latestFiles, s3_upload);
     logger.debug("Constructed content blocks:", contentBlocks);
+
     const newHumanMessage: Message = {
       id: uuidv4(),
       type: "human",
@@ -189,29 +171,7 @@ export default function Sidebar(props: ChatSidebarProps) {
   ) => {
     const files = event.target.files;
     if (!files) return;
-
-    // Convert files to base64 for sending
-    const fileDetails: FileInfo[] = await Promise.all(
-      Array.from(files).map(async (file) => {
-        const base64Data = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(",")[1]); // Remove data:...;base64, prefix
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        return {
-          fileName: file.name,
-          fileType: file.type,
-          file: file,
-          fileData: base64Data,
-        };
-      })
-    );
-
+    const fileDetails = await readFilesAsBase64(files);
     setFileInput((prevFile) => [...prevFile, ...fileDetails]);
   };
 

@@ -3,5 +3,5 @@ export type FileInfo = {
   fileType: string;
   file?: File;
   fileData?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };

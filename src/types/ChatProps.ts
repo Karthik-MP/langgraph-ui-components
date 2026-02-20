@@ -13,7 +13,7 @@ export interface chatBodyProps {
 
 export interface CallThisOnSubmitResponse {
     files?: FileInfo[];
-    contextValues?: Record<string, any>;
+    contextValues?: Record<string, unknown>;
 }
 
 export interface textToSpeechVoice {

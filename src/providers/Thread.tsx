@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type Dispa
 import { validate } from "uuid";
 import { useChatRuntime } from "./ChatRuntime";
 import { createClient } from "./client";
+import { logger } from "@/utils/logger";
+
 /**
  * Thread context manages the current conversation thread ID and configuration.
  * A thread represents a single conversation session with the AI.
@@ -10,8 +12,14 @@ import { createClient } from "./client";
 
 export type ThreadMode = "single" | "multi";
 
+/**
+ * Typed configuration object passed to the LangGraph API on each stream call.
+ * Use `Record<string, unknown>` instead of `any` so consumers are forced to
+ * narrow values before using them, preventing silent runtime errors.
+ */
+export type ThreadConfiguration = Record<string, unknown>;
 
-interface ThreadContextType {
+export interface ThreadContextType {
   /** Current thread ID, null if no thread exists yet */
   threadId: string | null;
   /** Set or update the current thread ID */
@@ -23,9 +31,9 @@ interface ThreadContextType {
   /** Function to update the list of threads */
   setThreads: Dispatch<SetStateAction<Thread[]>>;
   /** Thread-specific configuration passed to the LangGraph API */
-  configuration: any;
+  configuration: ThreadConfiguration | undefined;
   /** Update thread configuration */
-  setConfiguration: (config: any) => void;
+  setConfiguration: (config: ThreadConfiguration) => void;
   /** Whether threads are currently being loaded */
   threadsLoading: boolean;
   /** Set the loading state for threads */
@@ -36,9 +44,7 @@ interface ThreadContextType {
   /** Delete a thread by ID */
   deleteThread: (threadId: string) => Promise<void>;
   /** Update thread metadata */
-  updateThread: (threadId: string, metadata: Record<string, any>) => Promise<void>;
-  // createNewThread: () => void;
-  // clearThread: () => void;
+  updateThread: (threadId: string, metadata: Record<string, unknown>) => Promise<void>;
 }
 
 
@@ -72,7 +78,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   const [threadsLoading, setThreadsLoading] = useState(false);
 
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [configuration, setConfiguration] = useState<any>();
+  const [configuration, setConfiguration] = useState<ThreadConfiguration | undefined>();
 
   const [mode, setMode] = useState<ThreadMode>("single");
 
@@ -89,10 +95,9 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   const getThreads = useCallback(async (): Promise<Thread[]> => {
     if (!apiUrl || !assistantId) return [];
     if (!identity?.authToken) {
-      console.error("No authToken available for getThreads");
+      logger.error("No authToken available for getThreads");
       return [];
     }
-    // console.log("Fetching threads with authToken:", identity?.authToken);
     const client = createClient(apiUrl, identity?.authToken ?? undefined);
 
     const threads = await client.threads.search({
@@ -108,7 +113,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   const deleteThread = useCallback(async (threadIdToDelete: string) => {
     if (!apiUrl) return;
     if (!identity?.authToken) {
-      console.error("No authToken available for deleteThread");
+      logger.error("No authToken available for deleteThread");
       return;
     }
     const client = createClient(apiUrl, identity?.authToken ?? undefined);
@@ -124,10 +129,10 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     }
   }, [apiUrl, threadId, identity]);
 
-  const updateThread = useCallback(async (threadIdToUpdate: string, metadata: Record<string, any>) => {
+  const updateThread = useCallback(async (threadIdToUpdate: string, metadata: Record<string, unknown>) => {
     if (!apiUrl) return;
     if (!identity?.authToken) {
-      console.error("No authToken available for updateThread");
+      logger.error("No authToken available for updateThread");
       return;
     }
     const client = createClient(apiUrl, identity?.authToken ?? undefined);
