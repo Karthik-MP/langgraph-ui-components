@@ -52,12 +52,15 @@ export function Chat(chatProps?: ChatUIProps) {
     }, [setMode]);
 
     // Update isFirstMessage based on thread messages
+    // Only show first message screen when no thread exists AND no messages
     useEffect(() => {
         if (stream.messages && stream.messages.length > 0) {
             setIsFirstMessage(false);
-        } else {
+        } else if (!threadId) {
+            // Only reset to true if we don't have an active thread
             setIsFirstMessage(true);
         }
+        // Don't set to true if we have a threadId but messages are temporarily empty (loading)
     }, [threadId, stream.messages]);
 
     const defaultHandleSubmit = async (e: FormEvent) => {

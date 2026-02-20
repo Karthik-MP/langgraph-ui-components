@@ -10,6 +10,7 @@ import { StreamProvider } from "./providers/Stream";
 import { FileProvider } from "./providers/FileProvider";
 import { CustomComponentProvider } from "./providers/CustomComponentProvider";
 import useChatSuggestions, { SuggestionProvider } from "./providers/useChatSuggestions";
+import { Chat } from "./pages/Chat/Chat";
 // import { Chat } from "./pages/Chat/Chat";
 
 function ChatWrapper({ children }: { children?: React.ReactNode }) {
@@ -19,9 +20,15 @@ function ChatWrapper({ children }: { children?: React.ReactNode }) {
     maxSuggestions: 2,
   });
 
+  const textToSpeechVoice = {
+    apiUrl: "https://whisper.gauravshivaprasad.com/v1/audio/transcriptions",
+    apiKey: "sk-UqngFFpeT8V1j6LQh44zGhQU71W14A02VrY2n6K7eT1qsyE5",
+    model: "Systran/faster-whisper-small"
+  }
+
   return (<>
-    <Sidebar supportChatHistory={true} supportSpeechToText={true} />
-    {/* <Chat /> */}
+    <Sidebar supportChatHistory={true} textToSpeechVoice={textToSpeechVoice} />
+    {/* <Chat textToSpeechVoice={textToSpeechVoice} /> */}
     {children}
   </>
   )
@@ -33,17 +40,15 @@ function App() {
     user_id: "68f3b3ba4ce23e5b582b7780",
     org_id: "1",
     quote_id: "695b5cfcc4d07dc56f093d92",
-    textToSpeechVoice: {
-      apiUrl: "https://whisper.gauravshivaprasad.com/v1/audio/transcriptions",
-      apiKey: "sk-UqngFFpeT8V1j6LQh44zGhQU71W14A02VrY2n6K7eT1qsyE5",
-      model: "Systran/faster-whisper-small"
-    }
+    authToken: "LgCCT6e4CteXOO3842u-oqJpv-Cnb83-lTchzrJ9Lhw",
   });
   return (
     <React.Suspense fallback={<div>Loading (layout)...</div>}>
       <ChatRuntimeProvider
-        apiUrl={"https://agents.3ya.io"}
-        assistantId={"v3ya_external_agent"}
+        apiUrl={"https://agent-api.gauravshivaprasad.com"}
+        assistantId={"chat_agent"}
+        // apiUrl={"https://agents.3ya.io"}
+        // assistantId={"v3ya_external_agent"}
         identity={identity}
       >
         <ThreadProvider>
