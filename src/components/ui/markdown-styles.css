@@ -1,0 +1,58 @@
+/* Base markdown styles */
+.markdown-content code:not(pre code) {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+:is(.dark) .markdown-content code:not(pre code) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 1rem;
+  color: #666;
+}
+
+:is(.dark) .markdown-content blockquote {
+  border-left-color: #555;
+  color: #aaa;
+}
+
+.markdown-content pre {
+  overflow-x: auto;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+:is(.dark) .markdown-content th,
+:is(.dark) .markdown-content td {
+  border-color: #444;
+}
+
+.markdown-content th {
+  background-color: #f2f2f2;
+}
+
+:is(.dark) .markdown-content th {
+  background-color: #2a2a2a;
+}
+
+.markdown-content tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+:is(.dark) .markdown-content tr:nth-child(even) {
+  background-color: #1e1e1e;
+}
