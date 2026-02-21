@@ -154,7 +154,7 @@ export function Chat(chatProps?: ChatUIProps) {
                         // CHAT STATE (after message)
                         // =========================
                         <div className="flex h-full w-full flex-col">
-                            <div className="flex-1 overflow-y-auto thread-scrollbar">
+                            <div className="flex-1 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
                                 <div className="mx-auto max-w-3xl px-4 py-6">
                                     <ChatBody setIsFirstMessage={setIsFirstMessage} enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
                                 </div>
