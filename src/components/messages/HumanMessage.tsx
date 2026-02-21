@@ -64,7 +64,7 @@ function HumanMessage({ message }: { message: Message }) {
             {documents.map((doc, idx) => (
               <div
                 key={`${message.id}-doc-${idx}`}
-                className="flex items-center gap-3 bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-1 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
+                className="flex items-center gap-3 bg-linear-to-br from-zinc-800/90 to-zinc-900/90 backdrop-blur-sm px-4 py-1 rounded-xl border border-zinc-700/50 shadow-md hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 cursor-pointer group/file"
               >
                 <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover/file:bg-blue-500/20 transition-colors">
                   <FileIcon size={16} className="text-blue-400 shrink-0" />
@@ -78,27 +78,8 @@ function HumanMessage({ message }: { message: Message }) {
         )}
 
         {textContent && (
-          <div className="flex items-start gap-2">
-            {!isEditing && (
-              <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pt-4">
-                <Pencil
-                  size={16}
-                  className="text-zinc-500 cursor-pointer hover:text-white"
-                  onClick={() => {
-                    setIsEditing(true);
-                    setEditedText(textContent);
-                  }}
-                />
-                <Copy
-                  size={16}
-                  className="text-zinc-500 cursor-pointer hover:text-white"
-                  onClick={() => {
-                    navigator.clipboard.writeText(textContent);
-                  }}
-                />
-              </div>
-            )}
-            <div className="relative flex-1">
+          <div className="flex flex-col items-end gap-1">
+            <div className="relative flex-1 w-full flex justify-end">
               {isEditing ? (
                 <div className="flex flex-col gap-2 w-full">
                   <textarea
@@ -110,7 +91,7 @@ function HumanMessage({ message }: { message: Message }) {
                         handleSubmitEdit();
                       }
                     }}
-                    className="text-[15px] font-normal leading-relaxed rounded-2xl px-5 bg-zinc-900 border border-zinc-800 text-white shadow-lg break-words overflow-wrap-anywhere resize-none focus:outline-none min-h-[60px]"
+                    className="text-[15px] font-normal leading-relaxed rounded-2xl px-5 bg-zinc-900 border border-zinc-800 text-white shadow-lg wrap-break-word overflow-wrap-anywhere resize-none focus:outline-none min-h-15"
                     autoFocus
                   />
                   <div className="flex items-center justify-end gap-2">
@@ -138,6 +119,25 @@ function HumanMessage({ message }: { message: Message }) {
                 </div>
               )}
             </div>
+            {!isEditing && (
+              <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <Pencil
+                  size={16}
+                  className="text-zinc-500 cursor-pointer hover:text-white"
+                  onClick={() => {
+                    setIsEditing(true);
+                    setEditedText(textContent);
+                  }}
+                />
+                <Copy
+                  size={16}
+                  className="text-zinc-500 cursor-pointer hover:text-white"
+                  onClick={() => {
+                    navigator.clipboard.writeText(textContent);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

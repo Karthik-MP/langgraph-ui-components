@@ -221,7 +221,7 @@ const defaultComponents: any = {
   h1: ({ className, ...props }: { className?: string }) => (
     <h1
       className={cn(
-        "mb-8 scroll-m-20 text-4xl font-extrabold tracking-tight last:mb-0",
+        "mb-8 scroll-m-20 text-base font-extrabold tracking-tight sm:text-xl md:text-2xl last:mb-0",
         className,
       )}
       {...props}
@@ -230,7 +230,7 @@ const defaultComponents: any = {
   h2: ({ className, ...props }: { className?: string }) => (
     <h2
       className={cn(
-        "mt-8 mb-4 scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 last:mb-0",
+        "mt-8 mb-4 scroll-m-20 text-sm font-semibold tracking-tight sm:text-base md:text-xl first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -239,7 +239,7 @@ const defaultComponents: any = {
   h3: ({ className, ...props }: { className?: string }) => (
     <h3
       className={cn(
-        "mt-6 mb-4 scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0 last:mb-0",
+        "mt-6 mb-4 scroll-m-20 text-xs font-semibold tracking-tight sm:text-sm md:text-base first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -248,7 +248,7 @@ const defaultComponents: any = {
   h4: ({ className, ...props }: { className?: string }) => (
     <h4
       className={cn(
-        "mt-6 mb-4 scroll-m-20 text-xl font-semibold tracking-tight first:mt-0 last:mb-0",
+        "mt-6 mb-4 scroll-m-20 text-xs font-semibold tracking-tight sm:text-xs md:text-sm first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -257,7 +257,7 @@ const defaultComponents: any = {
   h5: ({ className, ...props }: { className?: string }) => (
     <h5
       className={cn(
-        "my-4 text-lg font-semibold first:mt-0 last:mb-0",
+        "my-4 text-xs font-semibold sm:text-xs md:text-xs first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -265,13 +265,13 @@ const defaultComponents: any = {
   ),
   h6: ({ className, ...props }: { className?: string }) => (
     <h6
-      className={cn("my-4 font-semibold first:mt-0 last:mb-0", className)}
+      className={cn("my-4 text-xs font-semibold sm:text-xs md:text-xs first:mt-0 last:mb-0", className)}
       {...props}
     />
   ),
   p: ({ className, ...props }: { className?: string }) => (
     <p
-      className={cn("mt-5 mb-5 leading-7 first:mt-0 last:mb-0", className)}
+      className={cn("mt-5 mb-5 text-sm leading-7 sm:text-base first:mt-0 last:mb-0", className)}
       {...props}
     />
   ),
