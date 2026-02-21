@@ -316,7 +316,7 @@ function ThreadList({
                 return (
                     <div
                         key={t.thread_id}
-                        className="relative w-full rounded-md hover:bg-zinc-800 group"
+                        className={`relative w-full rounded-md group ${t.thread_id === threadId ? "bg-zinc-700/60" : "hover:bg-zinc-800"}`}
                         onMouseEnter={() => setHoveredThread(t.thread_id)}
                         onMouseLeave={() => setHoveredThread(null)}
                     >
