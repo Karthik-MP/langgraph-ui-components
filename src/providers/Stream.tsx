@@ -255,6 +255,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         { messages: [...currentMessages, messageObj] },
         {
           context: mergedContext,
+          streamMode: ["values", "messages-tuple", "updates", "custom"],
         }
       );
     },
@@ -305,7 +306,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         { messages: [...allCurrentMessages, message] },
         {
           context: { ...identity, ...options?.contextValues },
-          streamMode: options?.streamMode || ["values"],
+          streamMode: options?.streamMode || ["values", "messages-tuple", "updates", "custom"],
           streamSubgraphs: options?.streamSubgraphs ?? true,
           streamResumable: options?.streamResumable ?? true,
           optimisticValues: (prev) => ({

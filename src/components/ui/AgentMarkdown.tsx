@@ -26,6 +26,7 @@ interface LinkEntry {
 }
 
 const DomainGroupsContext = createContext<Map<string, LinkEntry[]>>(new Map());
+const FontSizeContext = createContext<string | undefined>(undefined);
 
 function formatPathAsTitle(url: string): string {
   try {
@@ -269,12 +270,16 @@ const defaultComponents: any = {
       {...props}
     />
   ),
-  p: ({ className, ...props }: { className?: string }) => (
-    <p
-      className={cn("mt-5 mb-5 text-sm leading-7 sm:text-base first:mt-0 last:mb-0", className)}
-      {...props}
-    />
-  ),
+  p: ({ className, ...props }: { className?: string }) => {
+    const fontSize = useContext(FontSizeContext);
+    return (
+      <p
+        className={cn("mt-5 mb-5 leading-7 first:mt-0 last:mb-0", !fontSize && "text-sm sm:text-base", className)}
+        style={fontSize ? { fontSize } : undefined}
+        {...props}
+      />
+    );
+  },
   a: ({
     className,
     href,
@@ -430,7 +435,7 @@ function preprocessMarkdown(text: string): string {
   return result;
 }
 
-const MarkdownTextImpl: FC<{ children: string }> = ({ children }) => {
+const MarkdownTextImpl: FC<{ children: string; fontSize?: string }> = ({ children, fontSize }) => {
   const domainGroups = useMemo(() => {
     const groups = new Map<string, LinkEntry[]>();
     const linkRegex = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
@@ -455,6 +460,7 @@ const MarkdownTextImpl: FC<{ children: string }> = ({ children }) => {
   }, [children]);
 
   return (
+    <FontSizeContext.Provider value={fontSize}>
     <DomainGroupsContext.Provider value={domainGroups}>
       <div className="markdown-content">
         <ReactMarkdown
@@ -466,7 +472,8 @@ const MarkdownTextImpl: FC<{ children: string }> = ({ children }) => {
         </ReactMarkdown>
       </div>
     </DomainGroupsContext.Provider>
+    </FontSizeContext.Provider>
   );
 };
 
-export const AgentMarkdown = memo(MarkdownTextImpl);
+export const AgentMarkdown = memo(MarkdownTextImpl) as FC<{ children: string; fontSize?: string }>;
