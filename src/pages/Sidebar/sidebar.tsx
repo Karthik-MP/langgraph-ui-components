@@ -45,7 +45,7 @@ import ChatInput from "../../components/sidebar/ChatInput";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, textToSpeechVoice } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, textToSpeechVoice, leftPanelInitialWidth = 30, leftPanelClassName } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
@@ -53,8 +53,8 @@ export default function Sidebar(props: ChatSidebarProps) {
   const { fileInput, setFileInput } = useFileProvider();
 
   // Resize state
-  const [leftPanelWidth, setLeftPanelWidth] = useState(30); // in vw
-  const [sidebarWidth, setSidebarWidth] = useState(30); // in vw
+  const [leftPanelWidth, setLeftPanelWidth] = useState(leftPanelInitialWidth);
+  const [sidebarWidth, setSidebarWidth] = useState(30); 
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -210,7 +210,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                     exit={{ x: "0%" }}
                     transition={{ type: "spring", stiffness: 400, damping: 40 }}
                   >
-                    <div className="h-full overflow-auto relative">
+                    <div className={`h-full overflow-auto relative${leftPanelClassName ? ` ${leftPanelClassName}` : ""}`}>
                       {leftPanelContent || (
                         <>
                           <h3 className="text-lg font-semibold mb-4 text-white p-4">Left Panel</h3>

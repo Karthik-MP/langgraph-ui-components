@@ -122,7 +122,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     const msgKey = msg.id ?? `msg-${index}`;
 
     if (msg.type === "human") {
-      return <HumanMessage key={msgKey} message={msg} />;
+      return <HumanMessage key={msgKey} message={msg} fontSize={chatBodyProps?.fontSize} />;
     }
 
     // Skip standalone tool messages
@@ -223,6 +223,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
         {displayContent && (
           <AgentMessage
             agentName={chatBodyProps?.agentName}
+            fontSize={chatBodyProps?.fontSize}
             // agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
             message={{ ...combinedMessage, content: displayContent }}
             isStreaming={isStreamingThisMessage}
