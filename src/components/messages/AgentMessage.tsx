@@ -22,7 +22,7 @@ function getReasoningFromKwargs(message: Message | undefined): string | null {
   return null;
 }
 
-function InlineThinking({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
+function InlineThinking({ text, isStreaming, fontSize }: { text: string; isStreaming?: boolean; fontSize?: string }) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -51,14 +51,14 @@ function InlineThinking({ text, isStreaming }: { text: string; isStreaming?: boo
       </button>
       {expanded && (
         <div className="mt-1.5 border-l-2 border-white/10 pl-4 text-sm text-zinc-300">
-          <AgentMarkdown>{text}</AgentMarkdown>
+          <AgentMarkdown fontSize={fontSize}>{text}</AgentMarkdown>
         </div>
       )}
     </div>
   );
 }
 
-function renderContentInline(message: Message | undefined, isActivelyStreaming?: boolean) {
+function renderContentInline(message: Message | undefined, isActivelyStreaming?: boolean, fontSize?: string) {
   if (!message) return null;
   const content = message.content;
   const parts: React.ReactNode[] = [];
@@ -80,6 +80,7 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
         key="kwargs-reasoning"
         text={kwargsReasoning}
         isStreaming={isActivelyStreaming && !hasTextContent}
+        fontSize={fontSize}
       />,
     );
   }
@@ -88,7 +89,7 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
     if (content.length > 0) {
       parts.push(
         <div key="text-content" className="py-1">
-          <AgentMarkdown>{content}</AgentMarkdown>
+          <AgentMarkdown fontSize={fontSize}>{content}</AgentMarkdown>
         </div>,
       );
     }
@@ -105,7 +106,7 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
     if (textAccum.length > 0) {
       parts.push(
         <div key={`text-${idx}`} className="py-1">
-          <AgentMarkdown>{textAccum}</AgentMarkdown>
+          <AgentMarkdown fontSize={fontSize}>{textAccum}</AgentMarkdown>
         </div>,
       );
       textAccum = "";
@@ -131,7 +132,7 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
       );
       const isThisBlockStreaming = isActivelyStreaming && !hasTextAfter;
       parts.push(
-        <InlineThinking key={`thinking-${idx}`} text={text} isStreaming={isThisBlockStreaming} />,
+        <InlineThinking key={`thinking-${idx}`} text={text} isStreaming={isThisBlockStreaming} fontSize={fontSize} />,
       );
       idx++;
     }
@@ -143,6 +144,7 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
 
 function AgentMessage({
   agentName,
+  fontSize,
   message,
   isStreaming = false,
   onRegenerate,
@@ -153,6 +155,7 @@ function AgentMessage({
   onBranchSelect,
 }: {
   agentName?: string;
+  fontSize?: string;
   message: Message;
   isStreaming?: boolean;
   onRegenerate?: (parentCheckpoint: any | null | undefined, messageId: string, currentMessage: any) => void;
@@ -163,7 +166,7 @@ function AgentMessage({
   onBranchSelect?: (branch: string) => void;
 }) {
   const content = getContentString(message?.content);
-  const inlineContent = renderContentInline(message, isStreaming);
+  const inlineContent = renderContentInline(message, isStreaming, fontSize);
 
   return (
     <div className="agent-message flex flex-col gap-1 w-full group">
@@ -177,7 +180,7 @@ function AgentMessage({
         <span className="text-zinc-500 text-sm">{agentName || "Agent"}</span>
       </div>
       <div className="flex flex-1 flex-col gap-1 items-start min-w-0">
-        <div className="text-content text-foreground">
+        <div className="text-content text-foreground" style={fontSize ? { fontSize } : undefined}>
           {inlineContent ? (
             inlineContent
           ) : (
