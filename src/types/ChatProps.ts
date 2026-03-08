@@ -9,6 +9,7 @@ export interface headerProps {
 export interface chatBodyProps {
     agentName?: string;
     agentAvatarUrl?: string;
+    fontSize?: string;
 }
 
 export interface CallThisOnSubmitResponse {
@@ -42,6 +43,8 @@ export interface ChatSidebarProps extends ChatProps {
     leftPanelContent?: React.ReactNode;
     leftPanelOpen?: boolean;
     setLeftPanelOpen?: Dispatch<SetStateAction<boolean>>;
+    leftPanelInitialWidth?: number;
+    leftPanelClassName?: string;
 }
 
 export interface ChatUIProps extends ChatProps {

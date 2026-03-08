@@ -3,7 +3,7 @@ import type { Message } from "@langchain/langgraph-sdk";
 import { Copy, FileIcon, Pencil, Send, X } from "lucide-react";
 import React, { useState } from "react";
 
-function HumanMessage({ message }: { message: Message }) {
+function HumanMessage({ message, fontSize }: { message: Message; fontSize?: string }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
   const thread = useStreamContext();
@@ -91,7 +91,8 @@ function HumanMessage({ message }: { message: Message }) {
                         handleSubmitEdit();
                       }
                     }}
-                    className="text-[15px] font-normal leading-relaxed rounded-2xl px-5 bg-zinc-900 border border-zinc-800 text-white shadow-lg wrap-break-word overflow-wrap-anywhere resize-none focus:outline-none min-h-15"
+                    className="font-normal leading-relaxed rounded-2xl px-5 bg-zinc-900 border border-zinc-800 text-white shadow-lg wrap-break-word overflow-wrap-anywhere resize-none focus:outline-none min-h-15"
+                    style={fontSize ? { fontSize } : { fontSize: "15px" }}
                     autoFocus
                   />
                   <div className="flex items-center justify-end gap-2">
@@ -114,7 +115,7 @@ function HumanMessage({ message }: { message: Message }) {
                   </div>
                 </div>
               ) : (
-                <div className="text-[15px] font-normal leading-relaxed rounded-xl py-2 px-4 bg-[#242322] text-white shadow-lg max-w-full break-words overflow-wrap-anywhere ">
+                <div className="font-normal leading-relaxed rounded-xl py-2 px-4 bg-[#242322] text-white shadow-lg max-w-full break-words overflow-wrap-anywhere" style={fontSize ? { fontSize } : { fontSize: "15px" }}>
                   {textContent}
                 </div>
               )}
@@ -147,5 +148,5 @@ function HumanMessage({ message }: { message: Message }) {
 
 // Memoize with deep comparison on message ID
 export default React.memo(HumanMessage, (prevProps, nextProps) => {
-  return prevProps.message.id === nextProps.message.id;
+  return prevProps.message.id === nextProps.message.id && prevProps.fontSize === nextProps.fontSize;
 });
