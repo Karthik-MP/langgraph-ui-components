@@ -8,14 +8,24 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.es.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs.js"
-      }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    },
+    "./providers": {
+      "types": "./dist/entries/providers.d.ts",
+      "import": "./dist/entries/providers.es.js",
+      "require": "./dist/entries/providers.cjs.js"
+    },
+    "./components": {
+      "types": "./dist/entries/components.d.ts",
+      "import": "./dist/entries/components.es.js",
+      "require": "./dist/entries/components.cjs.js"
+    },
+    "./hooks": {
+      "types": "./dist/entries/hooks.d.ts",
+      "import": "./dist/entries/hooks.es.js",
+      "require": "./dist/entries/hooks.cjs.js"
     },
     "./styles.css": "./dist/styles.css"
   },
