@@ -53,11 +53,16 @@ export default defineConfig({
 
   build: {
     lib: {
-      entry: resolve(__dirname, "src/index.ts"),
+      entry: {
+        index: resolve(__dirname, "src/index.ts"),
+        "entries/providers": resolve(__dirname, "src/entries/providers.ts"),
+        "entries/components": resolve(__dirname, "src/entries/components.ts"),
+        "entries/hooks": resolve(__dirname, "src/entries/hooks.ts"),
+      },
       name: "LanggraphUIComponents",
       formats: ["es", "cjs"],
-      fileName: (format) =>
-        format === "es" ? "index.es.js" : "index.cjs.js",
+      fileName: (format, entryName) =>
+        format === "es" ? `${entryName}.es.js` : `${entryName}.cjs.js`,
     },
 
     rollupOptions: {
