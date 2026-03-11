@@ -29,6 +29,13 @@
     },
     "./styles.css": "./dist/styles.css"
   },
+  "typesVersions": {
+    "*": {
+      "providers": ["./dist/entries/providers.d.ts"],
+      "components": ["./dist/entries/components.d.ts"],
+      "hooks": ["./dist/entries/hooks.d.ts"]
+    }
+  },
   "files": [
     "dist",
     "src",
