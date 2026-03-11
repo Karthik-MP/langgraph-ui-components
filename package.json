@@ -1,7 +1,7 @@
 {
   "name": "langgraph-ui-components",
   "private": false,
-  "version": "0.0.23",
+  "version": "0.0.24",
   "type": "module",
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.es.js",
@@ -31,9 +31,15 @@
   },
   "typesVersions": {
     "*": {
-      "providers": ["./dist/entries/providers.d.ts"],
-      "components": ["./dist/entries/components.d.ts"],
-      "hooks": ["./dist/entries/hooks.d.ts"]
+      "providers": [
+        "./dist/entries/providers.d.ts"
+      ],
+      "components": [
+        "./dist/entries/components.d.ts"
+      ],
+      "hooks": [
+        "./dist/entries/hooks.d.ts"
+      ]
     }
   },
   "files": [
