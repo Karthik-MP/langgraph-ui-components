@@ -16,7 +16,7 @@ A React component library for building AI chat interfaces with LangChain/LangGra
 ## Installation
 
 ```bash
-npm install agentic-chat-ui-components
+npm install langgraph-ui-components
 ```
 
 **Peer dependencies** (install these separately):
@@ -28,11 +28,9 @@ npm install react react-dom @langchain/core @langchain/langgraph @langchain/lang
 ## Usage
 
 ```tsx
-import { 
-  Sidebar,
-  ChatProvider
-} from 'agentic-chat-ui-components';
-import 'agentic-chat-ui-components/styles.css';
+import { Sidebar } from 'langgraph-ui-components/components';
+import { ChatProvider } from 'langgraph-ui-components/providers';
+import 'langgraph-ui-components/styles.css';
 
 function App() {
   return (
@@ -47,17 +45,47 @@ function App() {
 }
 ```
 
+## Import Paths
+
+Use subpath imports for best auto-import support in VS Code and TypeScript:
+
+```tsx
+import { Sidebar, Chat } from 'langgraph-ui-components/components';
+import {
+  ChatProvider,
+  ChatRuntimeProvider,
+  ThreadProvider,
+  StreamProvider,
+  FileProvider,
+  CustomComponentProvider,
+  useThread,
+  useStreamContext,
+  useChatRuntime,
+  useFileProvider,
+  useCustomComponents,
+  useChatSuggestions,
+} from 'langgraph-ui-components/providers';
+import {
+  useTools,
+  useModels,
+} from 'langgraph-ui-components/hooks';
+import 'langgraph-ui-components/styles.css';
+```
+
+Root import is also supported for backward compatibility:
+
+```tsx
+import { Sidebar, ChatProvider, useStreamContext } from 'langgraph-ui-components';
+```
+
 ### Speech-to-Text Configuration
 
 To enable speech-to-text functionality with your Whisper API backend, configure the `textToSpeechVoice` property in the `identity` object:
 
 ```tsx
-import { 
-  Sidebar,
-  ChatProvider,
-  ChatRuntimeProvider
-} from 'agentic-chat-ui-components';
-import 'agentic-chat-ui-components/styles.css';
+import { Sidebar } from 'langgraph-ui-components/components';
+import { ChatProvider, ChatRuntimeProvider } from 'langgraph-ui-components/providers';
+import 'langgraph-ui-components/styles.css';
 
 function App() {
   return (
@@ -97,7 +125,7 @@ The microphone button in the ChatInput component will automatically use these se
 The `Chat` component provides a complete chat interface with thread history and file upload support.
 
 ```tsx
-import { Chat } from 'agentic-chat-ui-components';
+import { Chat } from 'langgraph-ui-components/components';
 
 <Chat 
   enableToolCallIndicator={true}
@@ -116,7 +144,7 @@ import { Chat } from 'agentic-chat-ui-components';
 The `Sidebar` component provides a chat interface with collapsible sidebar navigation.
 
 ```tsx
-import { Sidebar } from 'agentic-chat-ui-components';
+import { Sidebar } from 'langgraph-ui-components/components';
 
 <Sidebar 
   supportChatHistory={true}
@@ -148,12 +176,15 @@ import { Sidebar } from 'agentic-chat-ui-components';
 
 ## Exported Hooks
 
-- `useThread()` - Access thread state
-- `useStreamContext()` - Access streaming state
-- `useChatRuntime()` - Access runtime config
-- `useFileProvider()` - Access file state
-- `useCustomComponents()` - Register custom components
-- `useChatSuggestions()` - Display contextual chat suggestions
+- `useThread()` - Access thread state (`langgraph-ui-components/providers`)
+- `useStreamContext()` - Access streaming state (`langgraph-ui-components/providers`)
+- `useChatRuntime()` - Access runtime config (`langgraph-ui-components/providers`)
+- `useFileProvider()` - Access file state (`langgraph-ui-components/providers`)
+- `useCustomComponents()` - Register custom components (`langgraph-ui-components/providers`)
+- `useChatSuggestions()` - Display contextual chat suggestions (`langgraph-ui-components/providers`)
+- `useTools()` - Access tool registration helpers (`langgraph-ui-components/hooks`)
+- `useToolsDefault` - Backward-compatible default export alias for `useTools` (`langgraph-ui-components/hooks`)
+- `useModels()` - Access configured model options (`langgraph-ui-components/hooks`)
 
 ## useChatSuggestions Hook
 
@@ -169,7 +200,7 @@ The `useChatSuggestions` hook enables intelligent, opt-in chat suggestions for y
 ### Basic Usage
 
 ```tsx
-import { useChatSuggestions } from 'agentic-chat-ui-components';
+import { useChatSuggestions } from 'langgraph-ui-components/hooks';
 
 function MyComponent() {
   // Simply call the hook - it registers configuration internally
@@ -244,7 +275,7 @@ The `sendMessage` function is available through the `useStreamContext()` hook an
 ### Usage Example
 
 ```tsx
-import { useStreamContext } from 'agentic-chat-ui-components';
+import { useStreamContext } from 'langgraph-ui-components/hooks';
 
 function MyComponent() {
   const { sendMessage } = useStreamContext();
@@ -274,7 +305,7 @@ You can inject custom React components into chat messages using the `CustomCompo
 Pass initial components as the `initialComponents` prop to `CustomComponentProvider`:
 
 ```tsx
-import { CustomComponentProvider } from 'agentic-chat-ui-components';
+import { CustomComponentProvider } from 'langgraph-ui-components/providers';
 
 const MyCustomButton = ({ text }) => <button>{text}</button>;
 
@@ -296,7 +327,7 @@ function App() {
 Use the `registerComponent` method from the `useCustomComponents` hook:
 
 ```tsx
-import { useCustomComponents } from 'agentic-chat-ui-components';
+import { useCustomComponents } from 'langgraph-ui-components/hooks';
 
 function RegisterComponent() {
   const { registerComponent } = useCustomComponents();
@@ -321,6 +352,21 @@ Full TypeScript definitions available for:
 - `ChatRuntimeContextValue`
 - `FileInfo`
 - `SuggestionsOptions`
+- `SuggestionConfig`
+- `ThreadMode`
+- `ThreadConfiguration`
+- `ThreadContextType`
+- `StateType`
+- `CustomComponentContextValue`
+- `CustomTool`
+- `ModelOption`
+- `ChatProps`
+- `ChatSidebarProps`
+- `ChatUIProps`
+- `CallThisOnSubmitResponse`
+- `chatBodyProps`
+- `headerProps`
+- `textToSpeechVoice`
 
 ## Keywords
 
