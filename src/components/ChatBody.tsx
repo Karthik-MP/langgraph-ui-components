@@ -111,8 +111,8 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
 
   // Memoize message rendering logic to prevent unnecessary re-renders
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
-    // Skip empty content messages UNLESS they have tool calls (which means tool messages will follow)
-    if (!msg.content.length && !isAiWithToolCalls(msg)) return null;
+    const isCurrentlyStreamingMessage = isLoading && index === messagesArray.length - 1 && msg.type === "ai";
+    if (!msg.content.length && !isAiWithToolCalls(msg) && !isCurrentlyStreamingMessage) return null;
 
     if (msg.additional_kwargs?.hidden) {
       return null;
@@ -165,20 +165,27 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       }
     }
 
-    // Combine content from all AI messages
-    const combinedContent = groupedMessages
-      .map(m => {
-        if (typeof m.content === "string") return m.content;
-        if (Array.isArray(m.content)) {
-          return m.content
-            .map((c: any) => c.type === "text" ? c.text : "")
-            .filter(Boolean)
-            .join(" ");
-        }
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n\n");
+    // Merge content from all AI messages, preserving r/reasoning blocks
+    const hasArrayContent = groupedMessages.some(m => Array.isArray(m.content));
+    const mergedContent: Message["content"] = hasArrayContent
+      ? groupedMessages.flatMap(m => {
+          if (Array.isArray(m.content)) return m.content as any[];
+          if (typeof m.content === "string" && m.content.length > 0)
+            return [{ type: "text", text: m.content }];
+          return [];
+        })
+      : groupedMessages
+          .map(m => (typeof m.content === "string" ? m.content : ""))
+          .filter(Boolean)
+          .join("\n\n");
+
+    // Extract plain-text portion for legacy checks (tool-call extraction, etc.)
+    const combinedContent = hasArrayContent
+      ? (mergedContent as any[])
+          .map((c: any) => (c.type === "text" ? (c.text as string) : ""))
+          .filter(Boolean)
+          .join(" ")
+      : (mergedContent as string);
 
     const toolCallsFromContent = groupedMessages
       .flatMap((m) => {
@@ -187,15 +194,27 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       })
       .filter((tc): tc is NonNullable<typeof tc> => tc != null && tc !== undefined);
 
-    // Create a combined message object
+    // Create a combined message object preserving full content (including thinking blocks)
     const combinedMessage = {
       ...msg,
-      content: combinedContent,
+      content: mergedContent,
     };
 
     // Get branch metadata from thread
     const meta = msg ? stream.getMessagesMetadata(msg) : undefined;
-    const displayContent = combinedContent;
+
+    // Determine if there is any displayable content (text OR thinking/reasoning blocks)
+    const hasThinkingContent = hasArrayContent
+      ? (mergedContent as any[]).some(
+          (b: any) =>
+            (b.type === "thinking" && (b.thinking as string)?.length > 0) ||
+            (b.type === "reasoning" && (b.reasoning as string)?.length > 0),
+        )
+      : false;
+    const hasKwargsReasoning =
+      typeof (msg as any).additional_kwargs?.reasoning_content === "string" &&
+      ((msg as any).additional_kwargs.reasoning_content as string).length > 0;
+    const hasAnyDisplayableContent = !!combinedContent || hasThinkingContent || hasKwargsReasoning;
 
     const isLastMessageGroup = nextIndex >= messagesArray.length;
     const isStreamingThisMessage = isLoading && isLastMessageGroup;
@@ -203,13 +222,13 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     // Check if the first message in the group has tool calls
     const hasToolCalls = isAiWithToolCalls(msg) || toolCallsFromContent.length > 0;
 
-    // Show thinking if streaming and no content yet (only tool calls exist)
-    const showThinkingIndicator = isStreamingThisMessage && !displayContent && hasToolCalls;
+    // Show Thinking animation whenever streaming with no displayable content yet (plain chat or tool-call)
+    const showThinkingIndicator = isStreamingThisMessage && !hasAnyDisplayableContent;
 
     return (
       <React.Fragment key={msgKey}>
-        {/* 1. Thinking indicator - show when streaming with no content OR when tool messages exist */}
-        {showThinkingIndicator && enableToolCallIndicator && (
+        {/* 1. Thinking indicator - show when streaming with no content yet (no icon shown) */}
+        {showThinkingIndicator && (
           <Thinking />
         )}
         {enableToolCallIndicator && hasToolCalls && (
@@ -219,13 +238,13 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
             toolCalls={toolCallsFromContent}
           />
         )}
-        {/* 2. Agent message (combined content) */}
-        {displayContent && (
+        {/* 2. Agent message — pass full mergedContent so thinking/reasoning blocks are preserved */}
+        {hasAnyDisplayableContent && (
           <AgentMessage
             agentName={chatBodyProps?.agentName}
             fontSize={chatBodyProps?.fontSize}
             // agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
-            message={{ ...combinedMessage, content: displayContent }}
+            message={combinedMessage}
             isStreaming={isStreamingThisMessage}
             onRegenerate={handleRegenerate}
             feedback={msg.id ? messageFeedback[msg.id] : undefined}
