@@ -344,7 +344,7 @@ function DropdownSelector<T extends { id: string; label: string }>({
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white"
       >
         <span className="truncate" style={{ maxWidth }} title={fullLabel}>
           {displayLabel}
@@ -355,7 +355,7 @@ function DropdownSelector<T extends { id: string; label: string }>({
         <div
           ref={menuRef}
           style={menuStyle}
-          className="z-9999 min-w-55 max-h-77 overflow-y-auto rounded-xl border bg-popover p-1 shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-track]:bg-transparent"
+          className="z-[9999] min-w-[14rem] max-h-[19rem] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 text-white p-1 shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-600 [&::-webkit-scrollbar-track]:bg-transparent"
         >
           {items.map((item) => (
             <button
@@ -366,12 +366,12 @@ function DropdownSelector<T extends { id: string; label: string }>({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent",
-                item.id === selected && "bg-accent/50 font-medium",
+                "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white",
+                item.id === selected && "bg-zinc-800 font-medium text-white",
               )}
             >
               <span className="truncate">{item.label}</span>
-              {item.id === selected && <Check className="size-4 shrink-0 text-primary" />}
+              {item.id === selected && <Check className="size-4 shrink-0 text-zinc-300" />}
             </button>
           ))}
         </div>,

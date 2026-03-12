@@ -186,7 +186,7 @@ function AgentMessage({
           ) : (
             <>
               <div className="flex items-center gap-2 text-zinc-500">
-                <Loader2 className="animate-spin" size={16} />
+                {/* <Loader2 className="animate-spin" size={16} /> */}
                 <span>Thinking...</span>
               </div>
               {isStreaming && content && (
