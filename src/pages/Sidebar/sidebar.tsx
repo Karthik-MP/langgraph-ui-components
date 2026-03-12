@@ -316,7 +316,7 @@ export default function Sidebar(props: ChatSidebarProps) {
                     setInput={setInput}
                     textToSpeechVoice={textToSpeechVoice}
                     handleSubmit={defaultHandleSubmit}
-                    isLoading={isLoading}
+                    isLoading={isLoading || !!preventSubmit}
                     fileInput={fileInput}
                     handleFileSelect={onFileSelect}
                     setFileInput={setFileInput}
