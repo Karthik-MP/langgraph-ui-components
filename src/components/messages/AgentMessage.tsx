@@ -1,7 +1,7 @@
 import { cn } from "@/utils/tailwindUtil";
 import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
-import { BotMessageSquare, ChevronRight, Loader2, LoaderCircle, Sparkles } from "lucide-react";
+import { BotMessageSquare, ChevronRight, LoaderCircle, Sparkles } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { AgentMarkdown } from "../ui/AgentMarkdown";
 import { BranchSwitcher } from "./BranchSwitcher";
@@ -22,7 +22,15 @@ function getReasoningFromKwargs(message: Message | undefined): string | null {
   return null;
 }
 
-function InlineThinking({ text, isStreaming, fontSize }: { text: string; isStreaming?: boolean; fontSize?: string }) {
+function InlineThinking({
+  text,
+  isStreaming,
+  fontSize,
+}: {
+  text: string;
+  isStreaming?: boolean;
+  fontSize?: string;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -58,7 +66,11 @@ function InlineThinking({ text, isStreaming, fontSize }: { text: string; isStrea
   );
 }
 
-function renderContentInline(message: Message | undefined, isActivelyStreaming?: boolean, fontSize?: string) {
+function renderContentInline(
+  message: Message | undefined,
+  isActivelyStreaming?: boolean,
+  fontSize?: string,
+) {
   if (!message) return null;
   const content = message.content;
   const parts: React.ReactNode[] = [];
@@ -70,11 +82,12 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
         ? content.length > 0
         : Array.isArray(content) &&
           (content as Record<string, unknown>[]).some(
-            (b) =>
-              b.type === "text" &&
-              typeof b.text === "string" &&
-              (b.text as string).length > 0,
+            (block) =>
+              block.type === "text" &&
+              typeof block.text === "string" &&
+              (block.text as string).length > 0,
           );
+
     parts.push(
       <InlineThinking
         key="kwargs-reasoning"
@@ -132,7 +145,12 @@ function renderContentInline(message: Message | undefined, isActivelyStreaming?:
       );
       const isThisBlockStreaming = isActivelyStreaming && !hasTextAfter;
       parts.push(
-        <InlineThinking key={`thinking-${idx}`} text={text} isStreaming={isThisBlockStreaming} fontSize={fontSize} />,
+        <InlineThinking
+          key={`thinking-${idx}`}
+          text={text}
+          isStreaming={isThisBlockStreaming}
+          fontSize={fontSize}
+        />,
       );
       idx++;
     }
