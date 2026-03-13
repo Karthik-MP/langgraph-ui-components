@@ -144,6 +144,47 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       ? { Authorization: `Bearer ${identity?.authToken}` }
       : undefined,
     fetchStateHistory: true,
+    onUpdateEvent: (data, options) => {
+      // Scan update data (potentially nested by node name) for AI messages
+      // with reasoning_content. Inject them into state early so they're
+      // visible during streaming of the final text response.
+      const reasoningMessages: Message[] = [];
+
+      const scan = (obj: unknown) => {
+        if (!obj || typeof obj !== "object") return;
+        const o = obj as Record<string, unknown>;
+        if (Array.isArray(o.messages)) {
+          for (const m of o.messages as Message[]) {
+            const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+            if (
+              m?.type === "ai" &&
+              m.id &&
+              typeof ak?.reasoning_content === "string" &&
+              ak.reasoning_content.length > 0
+            ) {
+              reasoningMessages.push(m);
+            }
+          }
+        }
+        for (const val of Object.values(o)) {
+          if (val && typeof val === "object" && !Array.isArray(val)) {
+            scan(val);
+          }
+        }
+      };
+
+      scan(data);
+
+      if (reasoningMessages.length > 0) {
+        options.mutate((prev) => {
+          const prevMessages = (prev.messages ?? []) as Message[];
+          const prevIds = new Set(prevMessages.map((m) => m.id).filter(Boolean));
+          const newMessages = reasoningMessages.filter((m) => !prevIds.has(m.id!));
+          if (newMessages.length === 0) return prev;
+          return { ...prev, messages: [...prevMessages, ...newMessages] };
+        });
+      }
+    },
     onCustomEvent: (event, options) => {
       if (isUIMessage(event) || isRemoveUIMessage(event)) {
         options.mutate((prev) => {
