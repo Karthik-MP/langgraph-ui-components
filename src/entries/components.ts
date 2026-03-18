@@ -1,3 +1,5 @@
+import "../index.css";
+
 // ─── Components ───────────────────────────────────────────────────────────────
 export { default as Sidebar } from "../pages/Sidebar/sidebar";
 export { Chat } from "../pages/Chat/Chat";
