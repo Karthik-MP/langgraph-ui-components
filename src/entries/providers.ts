@@ -1,3 +1,5 @@
+import "../index.css";
+
 // ─── Providers ────────────────────────────────────────────────────────────────
 export { ChatProvider } from "../providers/ChatProvider";
 export { ChatRuntimeProvider } from "../providers/ChatRuntime";
