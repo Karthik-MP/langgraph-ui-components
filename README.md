@@ -1,4 +1,4 @@
-# Agentic Chat Components
+# Langgraph UI Chat Components
 
 A React component library for building AI chat interfaces with LangChain/LangGraph integration.
 
