@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
+import { InterruptCard } from "./messages/InterruptCard";
 import type { MessageFeedback } from "./messages/MessageActions";
 import Thinking from "./Thinking";
 
@@ -57,6 +58,48 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
   const handleBranchSelect = useCallback((branch: string) => {
     stream.setBranch(branch);
   }, [stream]);
+
+  // Handler for HITL interrupt responses
+  const handleInterruptRespond = useCallback((response: any) => {
+    stream.submit(null, { command: { resume: response } });
+  }, [stream]);
+
+  // Build interrupt actions for custom renderers
+  const interruptActions = useMemo(() => {
+    const interrupt = stream.interrupt;
+    if (!interrupt) return null;
+    const payload = interrupt.value as any;
+    const actionRequests = payload?.actionRequests ?? [];
+    return {
+      approve: () => {
+        handleInterruptRespond({
+          decisions: actionRequests.map(() => ({ type: "approve" as const })),
+        });
+      },
+      reject: (reason?: string) => {
+        handleInterruptRespond({
+          decisions: actionRequests.map(() => ({
+            type: "reject" as const,
+            message: reason || undefined,
+          })),
+        });
+      },
+      edit: (editedArgs: Record<string, unknown>) => {
+        const action = actionRequests[0];
+        handleInterruptRespond({
+          decisions: [
+            {
+              type: "edit" as const,
+              editedAction: {
+                name: action?.name ?? "",
+                args: { ...action?.args, ...editedArgs },
+              },
+            },
+          ],
+        });
+      },
+    };
+  }, [stream.interrupt, handleInterruptRespond]);
 
   const getToolCallsFromContent = useCallback((content: Message["content"]): AIMessage["tool_calls"] => {
     if (!Array.isArray(content)) return [];
@@ -364,6 +407,15 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
       ) : (
         <>
           {renderedMessages}
+          {/* Show HITL interrupt card when agent is paused for approval */}
+          {!isLoading && stream.interrupt && (
+            chatBodyProps?.renderInterrupt && interruptActions
+              ? chatBodyProps.renderInterrupt(stream.interrupt.value as any, interruptActions)
+              : <InterruptCard
+                  interrupt={stream.interrupt.value as any}
+                  onRespond={handleInterruptRespond}
+                />
+          )}
           {/* Show thinking indicator when loading and no AI response has started yet */}
           {isLoading && memoMessages.length > 0 && (() => {
             const lastMsg = memoMessages[memoMessages.length - 1];
