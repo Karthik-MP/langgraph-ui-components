@@ -1,5 +1,3 @@
-import "../index.css";
-
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useTools } from "../hooks/useTools";
 export { default as useToolsDefault } from "../hooks/useTools";
