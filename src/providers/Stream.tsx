@@ -146,9 +146,9 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
     fetchStateHistory: true,
     onUpdateEvent: (data, options) => {
       // Scan update data (potentially nested by node name) for AI messages
-      // with reasoning_content. Inject them into state early so they're
-      // visible during streaming of the final text response.
-      const reasoningMessages: Message[] = [];
+      // with reasoning_content or tool_status in additional_kwargs.
+      // Merge these into existing messages so they're available during streaming.
+      const enrichedMessages: Message[] = [];
 
       const scan = (obj: unknown) => {
         if (!obj || typeof obj !== "object") return;
@@ -156,13 +156,12 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
         if (Array.isArray(o.messages)) {
           for (const m of o.messages as Message[]) {
             const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
-            if (
-              m?.type === "ai" &&
-              m.id &&
-              typeof ak?.reasoning_content === "string" &&
-              ak.reasoning_content.length > 0
-            ) {
-              reasoningMessages.push(m);
+            if (m?.type === "ai" && m.id && ak) {
+              const hasReasoning = typeof ak.reasoning_content === "string" && ak.reasoning_content.length > 0;
+              const hasToolStatus = Array.isArray(ak.tool_status) && (ak.tool_status as unknown[]).length > 0;
+              if (hasReasoning || hasToolStatus) {
+                enrichedMessages.push(m);
+              }
             }
           }
         }
@@ -175,13 +174,33 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
 
       scan(data);
 
-      if (reasoningMessages.length > 0) {
+      if (enrichedMessages.length > 0) {
         options.mutate((prev) => {
           const prevMessages = (prev.messages ?? []) as Message[];
-          const prevIds = new Set(prevMessages.map((m) => m.id).filter(Boolean));
-          const newMessages = reasoningMessages.filter((m) => !prevIds.has(m.id!));
-          if (newMessages.length === 0) return prev;
-          return { ...prev, messages: [...prevMessages, ...newMessages] };
+          const enrichedById = new Map<string, Message>();
+          for (const m of enrichedMessages) {
+            if (m.id) enrichedById.set(m.id, m);
+          }
+
+          let changed = false;
+          const updatedMessages = prevMessages.map((m) => {
+            if (!m.id || !enrichedById.has(m.id)) return m;
+            const enriched = enrichedById.get(m.id)!;
+            enrichedById.delete(m.id);
+            changed = true;
+            const enrichedKwargs = (enriched as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+            return {
+              ...m,
+              additional_kwargs: {
+                ...(m.additional_kwargs ?? {}),
+                ...(enrichedKwargs ?? {}),
+              },
+            };
+          });
+
+          if (!changed) return prev;
+
+          return { ...prev, messages: updatedMessages };
         });
       }
     },
