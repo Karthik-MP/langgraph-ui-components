@@ -10,9 +10,8 @@ import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
 import type { MessageFeedback } from "./messages/MessageActions";
 import Thinking from "./Thinking";
-import ToolCallFunctions from "./ToolCallFunctions";
 
-export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
+export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = true, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
   const stream = useStreamContext();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
@@ -144,20 +143,17 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       }
     }
 
-    // Collect all consecutive AI messages and tool messages
-    const groupedMessages = [msg];
-    const toolMessages = [];
+    const groupedTimelineMessages: Message[] = [msg];
     let nextIndex = index + 1;
 
     while (nextIndex < messagesArray.length) {
       const nextMsg = messagesArray[nextIndex];
 
       if (isToolMessage(nextMsg)) {
-        toolMessages.push(nextMsg);
+        groupedTimelineMessages.push(nextMsg);
         nextIndex++;
       } else if (nextMsg.type === "ai") {
-        // Combine consecutive AI messages
-        groupedMessages.push(nextMsg);
+        groupedTimelineMessages.push(nextMsg);
         nextIndex++;
       } else {
         // Stop at human messages or other types
@@ -165,17 +161,20 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       }
     }
 
+    const groupedAiMessages = groupedTimelineMessages.filter((m) => m.type === "ai");
+    const toolMessages = groupedTimelineMessages.filter((m) => isToolMessage(m));
+
     // Merge content from all AI messages, preserving r/reasoning blocks
-    const hasArrayContent = groupedMessages.some(m => Array.isArray(m.content));
+    const hasArrayContent = groupedAiMessages.some((m) => Array.isArray(m.content));
     const mergedContent: Message["content"] = hasArrayContent
-      ? groupedMessages.flatMap(m => {
+      ? groupedAiMessages.flatMap((m) => {
           if (Array.isArray(m.content)) return m.content as any[];
           if (typeof m.content === "string" && m.content.length > 0)
             return [{ type: "text", text: m.content }];
           return [];
         })
-      : groupedMessages
-          .map(m => (typeof m.content === "string" ? m.content : ""))
+      : groupedAiMessages
+          .map((m) => (typeof m.content === "string" ? m.content : ""))
           .filter(Boolean)
           .join("\n\n");
 
@@ -187,7 +186,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
           .join(" ")
       : (mergedContent as string);
 
-    const toolCallsFromContent = groupedMessages
+    const toolCallsFromContent = groupedAiMessages
       .flatMap((m) => {
         const calls = getToolCallsFromContent(m.content);
         return calls || [];
@@ -212,15 +211,29 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
         )
       : false;
     const hasKwargsReasoning =
-      typeof (msg as any).additional_kwargs?.reasoning_content === "string" &&
-      ((msg as any).additional_kwargs.reasoning_content as string).length > 0;
-    const hasAnyDisplayableContent = !!combinedContent || hasThinkingContent || hasKwargsReasoning;
+      groupedAiMessages.some((m) => {
+        const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+        return typeof ak?.reasoning_content === "string" && (ak.reasoning_content as string).length > 0;
+      });
+    const hasKwargsToolStatus = groupedAiMessages.some((m) => {
+      const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+      return Array.isArray(ak?.tool_status) && (ak.tool_status as unknown[]).length > 0;
+    });
+
+    const hasToolCalls =
+      groupedAiMessages.some((m) => isAiWithToolCalls(m)) ||
+      toolCallsFromContent.length > 0 ||
+      toolMessages.length > 0 ||
+      hasKwargsToolStatus;
+
+    const hasAnyDisplayableContent =
+      !!combinedContent ||
+      hasThinkingContent ||
+      hasKwargsReasoning ||
+      (enableToolCallIndicator && hasToolCalls);
 
     const isLastMessageGroup = nextIndex >= messagesArray.length;
     const isStreamingThisMessage = isLoading && isLastMessageGroup;
-
-    // Check if the first message in the group has tool calls
-    const hasToolCalls = isAiWithToolCalls(msg) || toolCallsFromContent.length > 0;
 
     // Show Thinking animation whenever streaming with no displayable content yet (plain chat or tool-call)
     const showThinkingIndicator = isStreamingThisMessage && !hasAnyDisplayableContent;
@@ -231,20 +244,15 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
         {showThinkingIndicator && (
           <Thinking />
         )}
-        {enableToolCallIndicator && hasToolCalls && (
-          <ToolCallFunctions
-            title="Agent Thinking"
-            toolMessages={toolMessages}
-            toolCalls={toolCallsFromContent}
-          />
-        )}
-        {/* 2. Agent message — pass full mergedContent so thinking/reasoning blocks are preserved */}
+        {/* 2. Agent message — pass full mergedContent and grouped timeline for in-order rendering */}
         {hasAnyDisplayableContent && (
           <AgentMessage
             agentName={chatBodyProps?.agentName}
             fontSize={chatBodyProps?.fontSize}
             // agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
             message={combinedMessage}
+            groupedMessages={groupedTimelineMessages}
+            showToolActivity={enableToolCallIndicator}
             isStreaming={isStreamingThisMessage}
             onRegenerate={handleRegenerate}
             feedback={msg.id ? messageFeedback[msg.id] : undefined}
@@ -255,7 +263,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
           />
         )}
         {/* 3. Custom component (from all messages in the group) */}
-        {groupedMessages.map((m) => (
+        {groupedAiMessages.map((m) => (
           <CustomComponentRender key={m.id} message={m} thread={stream} />
         ))}
       </React.Fragment>
