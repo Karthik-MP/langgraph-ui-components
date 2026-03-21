@@ -729,6 +729,3 @@ Full TypeScript definitions available for:
 - `headerProps` — `{ title?, logoUrl? }`
 - `textToSpeechVoice` — `{ apiUrl, apiKey, model }`
 
-## Keywords
-
-`langgraph ui components` `react` `chat-ui` `ai-components` `chatbot` `sidebar` `streaming` `langchain` `assistant` `chatgpt-ui`
