@@ -1,5 +1,14 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 
+export interface InterruptComponentProps {
+  interrupt: any;
+  actions: {
+    approve: () => void;
+    reject: (reason?: string) => void;
+    edit: (editedArgs: Record<string, unknown>) => void;
+  };
+}
+
 export interface CustomComponentContextValue {
   components: Record<string, React.FunctionComponent | React.ComponentClass>;
   registerComponent: (
@@ -10,6 +19,12 @@ export interface CustomComponentContextValue {
     components: Record<string, React.FunctionComponent | React.ComponentClass>
   ) => void;
   unregisterComponent: (name: string) => void;
+  interruptComponents: Record<string, React.ComponentType<InterruptComponentProps>>;
+  registerInterruptComponent: (
+    toolName: string,
+    component: React.ComponentType<InterruptComponentProps>
+  ) => void;
+  unregisterInterruptComponent: (toolName: string) => void;
 }
 
 const CustomComponentContext = createContext<
@@ -32,6 +47,9 @@ export function CustomComponentProvider({
     useState<Record<string, React.FunctionComponent | React.ComponentClass>>(
       initialComponents
     );
+
+  const [interruptComponents, setInterruptComponents] =
+    useState<Record<string, React.ComponentType<InterruptComponentProps>>>({});
 
   const registerComponent = useCallback(
     (
@@ -68,6 +86,26 @@ export function CustomComponentProvider({
     });
   }, []);
 
+  const registerInterruptComponent = useCallback(
+    (
+      toolName: string,
+      component: React.ComponentType<InterruptComponentProps>
+    ) => {
+      setInterruptComponents((prev) => ({
+        ...prev,
+        [toolName]: component,
+      }));
+    },
+    []
+  );
+
+  const unregisterInterruptComponent = useCallback((toolName: string) => {
+    setInterruptComponents((prev) => {
+      const { [toolName]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
   return (
     <CustomComponentContext.Provider
       value={{
@@ -75,6 +113,9 @@ export function CustomComponentProvider({
         registerComponent,
         registerComponents,
         unregisterComponent,
+        interruptComponents,
+        registerInterruptComponent,
+        unregisterInterruptComponent,
       }}
     >
       {children}

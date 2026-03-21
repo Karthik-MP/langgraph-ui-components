@@ -6,22 +6,10 @@ export interface headerProps {
     logoUrl?: string;
 }
 
-export interface InterruptPayload {
-    actionRequests: Array<{ name: string; args: Record<string, unknown>; description?: string }>;
-    reviewConfigs: Array<{ actionName: string; allowedDecisions: string[]; argsSchema?: Record<string, unknown> }>;
-}
-
-export interface InterruptActions {
-    approve: () => void;
-    reject: (reason?: string) => void;
-    edit: (editedArgs: Record<string, unknown>) => void;
-}
-
 export interface chatBodyProps {
     agentName?: string;
     agentAvatarUrl?: string;
     fontSize?: string;
-    renderInterrupt?: (interrupt: InterruptPayload, actions: InterruptActions) => React.ReactNode;
 }
 
 export interface CallThisOnSubmitResponse {
