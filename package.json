@@ -121,6 +121,22 @@
     "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4"
   },
+  "keywords": [
+    "langgraph",
+    "langgraph-ui",
+    "react",
+    "chat-ui",
+    "ai-components",
+    "chatbot",
+    "sidebar",
+    "streaming",
+    "langchain",
+    "assistant",
+    "chatgpt-ui",
+    "human-in-the-loop",
+    "hitl",
+    "generative-ui"
+  ],
   "sideEffects": [
     "**/*.css"
   ],
