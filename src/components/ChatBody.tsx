@@ -1,5 +1,6 @@
 import { parsePartialJson } from "@langchain/core/output_parsers";
 import { useStreamContext } from "@/providers/Stream";
+import { useCustomComponents } from "@/providers/CustomComponentProvider";
 import type { chatBodyProps } from "@/types/ChatProps";
 import { logger } from "@/utils/logger";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
@@ -8,12 +9,12 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
-import { InterruptCard } from "./messages/InterruptCard";
 import type { MessageFeedback } from "./messages/MessageActions";
 import Thinking from "./Thinking";
 
 export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = true, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
   const stream = useStreamContext();
+  const { interruptComponents } = useCustomComponents();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
 
@@ -408,14 +409,13 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
         <>
           {renderedMessages}
           {/* Show HITL interrupt card when agent is paused for approval */}
-          {!isLoading && stream.interrupt && (
-            chatBodyProps?.renderInterrupt && interruptActions
-              ? chatBodyProps.renderInterrupt(stream.interrupt.value as any, interruptActions)
-              : <InterruptCard
-                  interrupt={stream.interrupt.value as any}
-                  onRespond={handleInterruptRespond}
-                />
-          )}
+          {!isLoading && stream.interrupt && interruptActions && (() => {
+            const payload = stream.interrupt.value as any;
+            const toolName = payload?.actionRequests?.[0]?.name;
+            const InterruptComponent = toolName ? interruptComponents[toolName] : undefined;
+            if (!InterruptComponent) return null;
+            return <InterruptComponent interrupt={payload} actions={interruptActions} />;
+          })()}
           {/* Show thinking indicator when loading and no AI response has started yet */}
           {isLoading && memoMessages.length > 0 && (() => {
             const lastMsg = memoMessages[memoMessages.length - 1];
