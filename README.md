@@ -12,6 +12,7 @@ A React component library for building AI chat interfaces with LangChain/LangGra
 - 🧩 **Provider-based architecture** - Flexible state management with React Context
 - 📝 **TypeScript** - Full type definitions included
 - 🎨 **Tailwind CSS** - Pre-built styles, easy to customize
+- 🛑 **Human-in-the-Loop (HITL)** - Built-in interrupt handling for agent approval flows
 
 ## Installation
 
@@ -138,6 +139,8 @@ import { Chat } from 'langgraph-ui-components/components';
 - `enableToolCallIndicator?: boolean` - Show visual indicators when AI tools are being executed. Default: `false`
 - `callThisOnSubmit?: () => Promise<CallThisOnSubmitResponse | void>` - Custom callback executed before message submission, useful for uploading files to external storage. Return `{ files, contextValues }` to attach files or inject context into the message.
 - `handleFileSelect?: (event: React.ChangeEvent<HTMLInputElement>) => void` - Custom file selection handler to override default behavior
+- `inputFileAccept?: string` - File types accepted by the file input (e.g. `"image/*,.pdf"`)
+- `chatBodyProps?: chatBodyProps` - Customize agent name, avatar, and font size (see [chatBodyProps](#chatbodyprops))
 
 ### Sidebar Component
 
@@ -164,6 +167,12 @@ import { Sidebar } from 'langgraph-ui-components/components';
 - `leftPanelContent?: React.ReactNode` - Custom content to display in the left expansion panel
 - `leftPanelOpen?: boolean` - External control for left panel open state
 - `setLeftPanelOpen?: (open: boolean) => void` - External setter for left panel open state
+- `leftPanelInitialWidth?: number` - Initial width of the left panel in pixels
+- `leftPanelClassName?: string` - CSS class name for the left panel container
+- `banner?: React.ReactNode` - Optional banner rendered above the chat messages (e.g. an alert or notice)
+- `filePreview?: (files: FileInfo[], setFileInput) => React.ReactNode` - Custom file preview renderer for selected files before submission
+- `inputFileAccept?: string` - File types accepted by the file input (e.g. `"image/*,.pdf"`)
+- `s3_upload?: boolean` - Enable S3 upload mode for file attachments
 
 ## Exported Providers
 
@@ -176,15 +185,18 @@ import { Sidebar } from 'langgraph-ui-components/components';
 
 ## Exported Hooks
 
-- `useThread()` - Access thread state (`langgraph-ui-components/providers`)
-- `useStreamContext()` - Access streaming state (`langgraph-ui-components/providers`)
-- `useChatRuntime()` - Access runtime config (`langgraph-ui-components/providers`)
-- `useFileProvider()` - Access file state (`langgraph-ui-components/providers`)
-- `useCustomComponents()` - Register custom components (`langgraph-ui-components/providers`)
-- `useChatSuggestions()` - Display contextual chat suggestions (`langgraph-ui-components/providers`)
-- `useTools()` - Access tool registration helpers (`langgraph-ui-components/hooks`)
-- `useToolsDefault` - Backward-compatible default export alias for `useTools` (`langgraph-ui-components/hooks`)
-- `useModels()` - Access configured model options (`langgraph-ui-components/hooks`)
+All from `langgraph-ui-components/providers` unless noted:
+
+| Hook | Description |
+|------|-------------|
+| `useStreamContext()` | Messages, loading state, sendMessage, stop, interrupt — [details](#usestreamcontext) |
+| `useThread()` | Thread ID, thread list, deleteThread, updateThread, mode — [details](#usethread) |
+| `useChatRuntime()` | apiUrl, assistantId, setAssistantId, identity — [details](#usechatruntime) |
+| `useFileProvider()` | `fileInput: FileInfo[]` and `setFileInput` |
+| `useCustomComponents()` | Register generative UI and interrupt components — [details](#custom-components) |
+| `useChatSuggestions()` | Opt-in chat suggestions — [details](#usechatsuggestions-hook) |
+| `useTools()` *(hooks)* | Sidebar tool buttons — [details](#usetools) |
+| `useModels()` *(hooks)* | Model list and selection — [details](#usemodels) |
 
 ## useChatSuggestions Hook
 
@@ -261,40 +273,245 @@ function ChatInterface() {
 
 When dependencies change, suggestions are regenerated to match the new context.
 
-## sendMessage Function
+## useStreamContext
 
-The `sendMessage` function is available through the `useStreamContext()` hook and allows you to send messages programmatically to the AI agent.
-
-### Parameters
-
-- `message` (Message | string): The message content. Can be a string for simple text messages or a full Message object for more control.
-- `options` (optional object):
-  - `type` (Message["type"], optional): The message type to use when sending a string message. Defaults to "human" for user messages. Use "system" for agent-only messages.
-  - `config` (any, optional): Additional configuration to pass to the agent.
-
-### Usage Example
+Access the full streaming state and control functions from anywhere inside the provider tree.
 
 ```tsx
 import { useStreamContext } from 'langgraph-ui-components/providers';
 
-function MyComponent() {
-  const { sendMessage } = useStreamContext();
+const {
+  messages,       // Message[] — all messages in the conversation
+  isLoading,      // boolean — true while agent is streaming
+  interrupt,      // interrupt payload when agent pauses for human input
+  sendMessage,    // send a message programmatically
+  submitMessage,  // low-level submit with stream control options
+  regenerateMessage, // regenerate an AI response by message ID
+  fetchCatalog,   // fetch available agents from /agents/catalog
+  stop,           // cancel the current stream
+} = useStreamContext();
+```
 
-  const handleSend = async () => {
-    await sendMessage("Hello, AI!", { isAIMessage: false });
-  };
+### sendMessage
 
-  return <button onClick={handleSend}>Send Message</button>;
+Send a message programmatically. The message is appended to the conversation and submitted to the agent.
+
+```tsx
+// Simple string
+await sendMessage("Hello!");
+
+// With options
+await sendMessage("Hello!", {
+  type: "human",            // message type, defaults to "human"
+  hidden: true,             // hide from UI (useful for system-level triggers)
+  id: "custom-id",          // custom message ID instead of auto-generated UUID
+  context: { key: "val" }, // extra context merged with identity
+  additional_kwargs: {},    // custom metadata attached to the message
+});
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `type` | `Message["type"]` | Message type (`"human"`, `"system"`, etc.). Default: `"human"` |
+| `hidden` | `boolean` | If `true`, message is not shown in the chat UI |
+| `id` | `string` | Custom message ID (auto-generated UUID if omitted) |
+| `name` | `string` | Required for function/tool messages |
+| `tool_call_id` | `string` | ID linking this message to a tool call |
+| `tool_calls` | `ToolCall[]` | Tool calls to attach to the message |
+| `additional_kwargs` | `Record<string, unknown>` | Custom metadata on the message |
+| `ui` | `UIMessage[]` | UI components to display alongside the message |
+| `context` | `Record<string, unknown>` | Context values merged with identity for this message |
+
+### submitMessage
+
+Low-level submit with full control over streaming behavior. Use this when you need non-default stream modes.
+
+```tsx
+await submitMessage(messageObject, {
+  streamMode: ["values", "updates"],  // which stream modes to use
+  streamSubgraphs: true,              // include subgraph updates
+  streamResumable: true,              // allow stream resumption
+  contextValues: { user_role: "admin" }, // extra context for this call
+});
+```
+
+### regenerateMessage
+
+Regenerate an AI response. Resumes from the checkpoint before the given message ID.
+
+```tsx
+await regenerateMessage(messageId);
+```
+
+### fetchCatalog
+
+Fetch the list of available agents from your API's `/agents/catalog` endpoint.
+
+```tsx
+const catalog = await fetchCatalog();
+```
+
+### stop
+
+Cancel the currently active stream.
+
+```tsx
+const { stop, isLoading } = useStreamContext();
+
+<button onClick={stop} disabled={!isLoading}>Stop</button>
+```
+
+## useThread
+
+Access and manage conversation threads.
+
+```tsx
+import { useThread } from 'langgraph-ui-components/providers';
+
+const {
+  threadId,           // string | null — current thread ID
+  setThreadId,        // switch to a different thread
+  threads,            // Thread[] — list of all threads
+  getThreads,         // fetch threads from API
+  setThreads,         // directly update thread list
+  configuration,      // ThreadConfiguration — config passed to LangGraph on each call
+  setConfiguration,   // update thread configuration
+  mode,               // "single" | "multi"
+  setMode,            // switch between single and multi-thread modes
+  threadsLoading,     // boolean — true while fetching thread list
+  deleteThread,       // delete a thread by ID
+  updateThread,       // update thread metadata
+} = useThread();
+```
+
+### deleteThread
+
+```tsx
+await deleteThread(threadId);
+// Removes thread from list and clears current threadId if it was the active one
+```
+
+### updateThread
+
+```tsx
+await updateThread(threadId, { title: "My conversation" });
+// Updates metadata on the thread and refreshes the thread list
+```
+
+### Thread Configuration
+
+`configuration` is a free-form object passed to the LangGraph API on every stream call. Use it to send per-thread settings your agent reads from `config.configurable`:
+
+```tsx
+const { setConfiguration } = useThread();
+
+setConfiguration({
+  temperature: 0.7,
+  system_prompt: "You are a helpful assistant.",
+});
+```
+
+### URL-based Thread Loading
+
+Append `?thread=<threadId>` to the page URL to automatically load a specific thread on mount:
+
+```
+https://yourapp.com/chat?thread=abc123
+```
+
+## useChatRuntime
+
+Access and update the core runtime configuration.
+
+```tsx
+import { useChatRuntime } from 'langgraph-ui-components/providers';
+
+const {
+  apiUrl,          // string — base API URL
+  assistantId,     // string — current assistant/graph ID
+  setAssistantId,  // switch to a different assistant at runtime
+  identity,        // ChatIdentity | null | undefined
+} = useChatRuntime();
+```
+
+`setAssistantId` is useful when your app lets users pick which agent to talk to:
+
+```tsx
+const { setAssistantId } = useChatRuntime();
+
+<button onClick={() => setAssistantId("support_agent")}>Switch to Support</button>
+```
+
+## useTools
+
+Manage the sidebar tool buttons (the icon strip on the left panel).
+
+```tsx
+import { useTools } from 'langgraph-ui-components/hooks';
+
+const {
+  tool,              // CustomTool[] — built-in tools (Search, Chat)
+  addTool,           // add a custom tool button
+  userDefinedTools,  // CustomTool[] — tools added via addTool
+  setUserDefinedTools, // directly replace user-defined tools
+} = useTools();
+```
+
+### Adding a Custom Tool
+
+```tsx
+import { useTools } from 'langgraph-ui-components/hooks';
+import { Download } from 'lucide-react';
+
+function MyApp() {
+  const { addTool } = useTools();
+
+  useEffect(() => {
+    addTool({
+      label: "Export",
+      icon: <Download />,
+      alt: "Export conversation",   // tooltip text
+      onClick: () => handleExport(),
+    });
+  }, []);
 }
 ```
 
-This will send a user-visible message "Hello, AI!" to the agent.
+### CustomTool Type
 
-For agent-only messages:
+```typescript
+type CustomTool = {
+  label: string;                  // display name
+  icon: React.ReactElement;       // icon component (e.g. from lucide-react)
+  alt?: string;                   // tooltip text
+  onClick: () => void;            // click handler
+};
+```
+
+## useModels
+
+Fetch and manage model selection. Calls `GET /agents/models` on mount and persists the selection to `localStorage`.
 
 ```tsx
-await sendMessage("Internal event occurred", { type: "system" });
+import { useModels } from 'langgraph-ui-components/hooks';
+
+const {
+  models,           // ModelOption[] — available models
+  selectedModel,    // string — currently selected model ID
+  setSelectedModel, // update selection (also persists to localStorage)
+  loading,          // boolean — true while fetching
+} = useModels();
 ```
+
+```tsx
+// ModelOption type
+type ModelOption = {
+  id: string;
+  name: string;
+};
+```
+
+Models with "embed" or "rerank" in their ID are automatically filtered out. Selection persists under the localStorage key `"agent-chat:selected-model"` and is safe for SSR environments.
 
 ## Custom Components
 
@@ -345,28 +562,172 @@ function RegisterComponent() {
 - `registerComponents(components)`: Register multiple components at once.
 - `unregisterComponent(name)`: Remove a registered component.
 
+## Human-in-the-Loop (HITL) Interrupts
+
+LangGraph agents can pause mid-execution and ask a human to review or approve an action before continuing. This library has built-in support for rendering these interrupt requests with custom UI.
+
+### How It Works
+
+1. Your agent raises an interrupt with an `actionRequests` payload
+2. The library detects `stream.interrupt` and looks up a registered interrupt component by **tool name**
+3. Your component receives the interrupt data and action callbacks
+4. Calling one of the action callbacks resumes the agent
+
+### Agent-side Interrupt Format
+
+Your LangGraph agent should raise an interrupt with this shape:
+
+```python
+from langgraph.types import interrupt
+
+interrupt({
+    "actionRequests": [
+        {
+            "name": "send_email",        # must match the name you register
+            "args": {"to": "user@example.com", "subject": "Hello"},
+            "description": "Send a welcome email"  # optional
+        }
+    ],
+    "reviewConfigs": [
+        {
+            "actionName": "send_email",
+            "allowedDecisions": ["approve", "reject", "edit"]
+        }
+    ]
+})
+```
+
+### Registering an Interrupt Component
+
+Use `registerInterruptComponent` from `useCustomComponents()` to register a component for a specific tool name:
+
+```tsx
+import { useCustomComponents } from 'langgraph-ui-components/providers';
+import type { InterruptComponentProps } from 'langgraph-ui-components/providers';
+import { useEffect } from 'react';
+
+function SendEmailInterrupt({ interrupt, actions }: InterruptComponentProps) {
+  const request = interrupt.actionRequests[0];
+
+  return (
+    <div className="border rounded p-4">
+      <h3>Approve Action: {request.name}</h3>
+      <pre>{JSON.stringify(request.args, null, 2)}</pre>
+      <div className="flex gap-2 mt-3">
+        <button onClick={() => actions.approve()}>Approve</button>
+        <button onClick={() => actions.reject("Not needed")}>Reject</button>
+        <button onClick={() => actions.edit({ subject: "Updated subject" })}>
+          Edit & Approve
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const { registerInterruptComponent } = useCustomComponents();
+
+  useEffect(() => {
+    // Register for the tool name that matches your agent's interrupt
+    registerInterruptComponent('send_email', SendEmailInterrupt);
+  }, [registerInterruptComponent]);
+
+  return <Sidebar />;
+}
+```
+
+Or register via `ChatProvider`'s `customComponents` if you prefer props-based setup (note: this is for generative UI components — for interrupts, use `registerInterruptComponent` as above).
+
+### `InterruptComponentProps`
+
+```typescript
+interface InterruptComponentProps {
+  interrupt: {
+    actionRequests: Array<{
+      name: string;
+      args: Record<string, unknown>;
+      description?: string;
+    }>;
+    reviewConfigs: Array<{
+      actionName: string;
+      allowedDecisions: string[];
+      argsSchema?: Record<string, unknown>;
+    }>;
+  };
+  actions: {
+    /** Resume the agent with approval */
+    approve: () => void;
+    /** Resume the agent with rejection */
+    reject: (reason?: string) => void;
+    /** Resume the agent with edited arguments */
+    edit: (editedArgs: Record<string, unknown>) => void;
+  };
+}
+```
+
+### `useCustomComponents` — Interrupt Methods
+
+- `registerInterruptComponent(toolName, component)` — Register a component to render when the agent interrupts for the given tool name
+- `unregisterInterruptComponent(toolName)` — Remove a registered interrupt component
+
+### Accessing Interrupt State Directly
+
+You can also access the raw interrupt from the stream context if you need to build custom logic:
+
+```tsx
+import { useStreamContext } from 'langgraph-ui-components/providers';
+
+function MyComponent() {
+  const { interrupt, isLoading } = useStreamContext();
+
+  if (!isLoading && interrupt) {
+    console.log('Agent paused:', interrupt.value);
+  }
+}
+```
+
+## chatBodyProps
+
+The `chatBodyProps` prop on both `Chat` and `Sidebar` customizes how agent messages are displayed:
+
+```tsx
+<Sidebar
+  chatBodyProps={{
+    agentName: "Aria",
+    agentAvatarUrl: "https://example.com/avatar.png",
+    fontSize: "15px",
+  }}
+/>
+```
+
+**Props:**
+- `agentName?: string` — Display name shown above agent messages. Default: `"Agent"`
+- `agentAvatarUrl?: string` — URL for the agent avatar image
+- `fontSize?: string` — Font size for message text (e.g. `"14px"`, `"1rem"`)
+
 ## Types
 
 Full TypeScript definitions available for:
-- `ChatIdentity`
-- `ChatRuntimeContextValue`
-- `FileInfo`
-- `SuggestionsOptions`
-- `SuggestionConfig`
-- `ThreadMode`
-- `ThreadConfiguration`
-- `ThreadContextType`
-- `StateType`
-- `CustomComponentContextValue`
-- `CustomTool`
-- `ModelOption`
-- `ChatProps`
-- `ChatSidebarProps`
-- `ChatUIProps`
-- `CallThisOnSubmitResponse`
-- `chatBodyProps`
-- `headerProps`
-- `textToSpeechVoice`
+- `ChatIdentity` — user/org identity + auth token
+- `ChatRuntimeContextValue` — `useChatRuntime()` return type
+- `FileInfo` — `{ fileName, fileType, file?, fileData?, metadata? }`
+- `SuggestionsOptions` — options for `useChatSuggestions`
+- `SuggestionConfig` — internal suggestion config shape
+- `ThreadMode` — `"single" | "multi"`
+- `ThreadConfiguration` — `Record<string, unknown>` passed to LangGraph config
+- `ThreadContextType` — `useThread()` return type
+- `StateType` — `{ messages, ui?, suggestions? }`
+- `CustomComponentContextValue` — `useCustomComponents()` return type
+- `InterruptComponentProps` — props for HITL interrupt components
+- `CustomTool` — `{ label, icon, alt?, onClick }`
+- `ModelOption` — `{ id, name }`
+- `ChatProps` — base props shared by Chat and Sidebar
+- `ChatSidebarProps` — Sidebar-specific props (extends ChatProps)
+- `ChatUIProps` — Chat-specific props (extends ChatProps)
+- `CallThisOnSubmitResponse` — `{ files?, contextValues? }`
+- `chatBodyProps` — `{ agentName?, agentAvatarUrl?, fontSize? }`
+- `headerProps` — `{ title?, logoUrl? }`
+- `textToSpeechVoice` — `{ apiUrl, apiKey, model }`
 
 ## Keywords
 
