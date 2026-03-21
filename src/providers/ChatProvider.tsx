@@ -26,6 +26,11 @@ interface ChatProviderProps {
    * Defaults to a plain `<div>Loading chat...</div>` if not provided.
    */
   suspenseFallback?: React.ReactNode;
+  /**
+   * Initial thread mode. Use `"multi"` to enable thread history and switching.
+   * Defaults to `"single"` (one conversation, no history panel).
+   */
+  initialMode?: "single" | "multi";
 }
 
 /**
@@ -35,10 +40,21 @@ interface ChatProviderProps {
  * 
  * @example
  * ```tsx
+ * // Single-thread mode (default)
  * <ChatProvider
  *   apiUrl="https://api.example.com"
  *   assistantId="my-assistant"
  *   identity={{ user_id: "user123", org_id: "org456" }}
+ * >
+ *   <YourChatUI />
+ * </ChatProvider>
+ *
+ * // Multi-thread mode (enables thread history)
+ * <ChatProvider
+ *   apiUrl="https://api.example.com"
+ *   assistantId="my-assistant"
+ *   identity={{ user_id: "user123", org_id: "org456" }}
+ *   initialMode="multi"
  * >
  *   <YourChatUI />
  * </ChatProvider>
@@ -51,6 +67,7 @@ export function ChatProvider({
   children,
   customComponents,
   suspenseFallback = <div>Loading chat...</div>,
+  initialMode = "single",
 }: ChatProviderProps) {
   return (
     <React.Suspense fallback={suspenseFallback}>
@@ -59,7 +76,7 @@ export function ChatProvider({
         assistantId={assistantId}
         identity={identity}
       >
-        <ThreadProvider>
+        <ThreadProvider initialMode={initialMode}>
           <StreamProvider>
             <SuggestionProvider>
               <CustomComponentProvider initialComponents={customComponents}>

@@ -71,7 +71,7 @@ function getThreadSearchMetadata(
  * </ThreadProvider>
  * ```
  */
-export function ThreadProvider({ children }: { children: ReactNode }) {
+export function ThreadProvider({ children, initialMode = "single" }: { children: ReactNode; initialMode?: ThreadMode }) {
 
   const { apiUrl, assistantId, identity } = useChatRuntime();
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -80,7 +80,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [configuration, setConfiguration] = useState<ThreadConfiguration | undefined>();
 
-  const [mode, setMode] = useState<ThreadMode>("single");
+  const [mode, setMode] = useState<ThreadMode>(initialMode);
 
   // Extract thread ID from URL query parameter on component mount
   useEffect(() => {

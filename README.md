@@ -136,7 +136,7 @@ import { Chat } from 'langgraph-ui-components/components';
 
 **Props:**
 - `enableToolCallIndicator?: boolean` - Show visual indicators when AI tools are being executed. Default: `false`
-- `callThisOnSubmit?: () => Promise<FileInfo[]>` - Custom callback executed before message submission, useful for uploading files to external storage
+- `callThisOnSubmit?: () => Promise<CallThisOnSubmitResponse | void>` - Custom callback executed before message submission, useful for uploading files to external storage. Return `{ files, contextValues }` to attach files or inject context into the message.
 - `handleFileSelect?: (event: React.ChangeEvent<HTMLInputElement>) => void` - Custom file selection handler to override default behavior
 
 ### Sidebar Component
@@ -167,9 +167,9 @@ import { Sidebar } from 'langgraph-ui-components/components';
 
 ## Exported Providers
 
-- `ChatProvider` - Core chat state management
+- `ChatProvider` - Core chat state management. Props: `apiUrl`, `assistantId`, `identity?`, `initialMode?` (`"single"` | `"multi"`, default `"single"`), `customComponents?`, `suspenseFallback?`
 - `ChatRuntimeProvider` - Runtime configuration
-- `ThreadProvider` - Conversation thread management
+- `ThreadProvider` - Conversation thread management. Props: `initialMode?` (`"single"` | `"multi"`, default `"single"`)
 - `StreamProvider` - AI streaming responses
 - `FileProvider` - File upload handling
 - `CustomComponentProvider` - Custom component rendering
@@ -200,7 +200,7 @@ The `useChatSuggestions` hook enables intelligent, opt-in chat suggestions for y
 ### Basic Usage
 
 ```tsx
-import { useChatSuggestions } from 'langgraph-ui-components/hooks';
+import { useChatSuggestions } from 'langgraph-ui-components/providers';
 
 function MyComponent() {
   // Simply call the hook - it registers configuration internally
@@ -275,7 +275,7 @@ The `sendMessage` function is available through the `useStreamContext()` hook an
 ### Usage Example
 
 ```tsx
-import { useStreamContext } from 'langgraph-ui-components/hooks';
+import { useStreamContext } from 'langgraph-ui-components/providers';
 
 function MyComponent() {
   const { sendMessage } = useStreamContext();
@@ -327,7 +327,7 @@ function App() {
 Use the `registerComponent` method from the `useCustomComponents` hook:
 
 ```tsx
-import { useCustomComponents } from 'langgraph-ui-components/hooks';
+import { useCustomComponents } from 'langgraph-ui-components/providers';
 
 function RegisterComponent() {
   const { registerComponent } = useCustomComponents();
