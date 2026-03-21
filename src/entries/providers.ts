@@ -5,7 +5,7 @@ export { ThreadProvider } from "../providers/Thread";
 export { StreamProvider } from "../providers/Stream";
 export { FileProvider } from "../providers/FileProvider";
 export { CustomComponentProvider } from "../providers/CustomComponentProvider";
-export type { CustomComponentContextValue } from "../providers/CustomComponentProvider";
+export type { CustomComponentContextValue, InterruptComponentProps } from "../providers/CustomComponentProvider";
 
 // ─── Provider hooks ───────────────────────────────────────────────────────────
 export { useThread } from "../providers/Thread";
