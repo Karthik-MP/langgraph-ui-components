@@ -76,7 +76,9 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
           id: t.id && typeof t.id === "string" ? t.id : `todo-${index}`,
           content: t.content,
           status,
-          updatedAt: t.updatedAt instanceof Date ? t.updatedAt : new Date(),
+          updatedAt: t.updatedAt instanceof Date || typeof t.updatedAt === "string" || typeof t.updatedAt === "number"
+            ? (t.updatedAt as string | number | Date)
+            : undefined,
           run_id: typeof t.run_id === "string" ? t.run_id : undefined,
           runId: typeof t.runId === "string" ? t.runId : undefined,
           messageId: typeof t.messageId === "string" ? t.messageId : undefined,
@@ -315,7 +317,16 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
         return typeof ak?.reasoning_content === "string" && (ak.reasoning_content as string).length > 0;
       });
 
-    const hasToolCalls = enableToolCallIndicator && groupedAiMessages.some((m) => isAiWithToolCalls(m));
+    const hasKwargsToolStatus = groupedAiMessages.some((m) => {
+      const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+      return Array.isArray(ak?.tool_status) && (ak.tool_status as unknown[]).length > 0;
+    });
+    const hasToolMessages = groupedTimelineMessages.some((m) => isToolMessage(m));
+    const hasToolCalls = enableToolCallIndicator && (
+      groupedAiMessages.some((m) => isAiWithToolCalls(m)) ||
+      hasKwargsToolStatus ||
+      hasToolMessages
+    );
     const hasAnyDisplayableContent =
       !!combinedContent ||
       hasThinkingContent ||
@@ -390,7 +401,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
             todos={todosForGroup}
           />
         )}
-        {/* 4. Custom component (from all messages in the group) */}
+        {/* 3. Custom component (from all messages in the group) */}
         {groupedAiMessages.map((m) => (
           <CustomComponentRender key={m.id} message={m} thread={stream} />
         ))}

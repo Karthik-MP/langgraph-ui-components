@@ -40,7 +40,7 @@ function CustomComponentRender({
           return (
             <LoadExternalComponent
               key={(customComponent as any)._key || `${message.id}-${customComponent.id || index}`}
-              stream={thread}
+              stream={thread as any}
               message={customComponent}
               components={components}
               meta={{ ...componentProps, ui: customComponent }}
