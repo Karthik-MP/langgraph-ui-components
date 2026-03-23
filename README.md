@@ -13,6 +13,7 @@ A React component library for building AI chat interfaces with LangChain/LangGra
 - 📝 **TypeScript** - Full type definitions included
 - 🎨 **Tailwind CSS** - Pre-built styles, easy to customize
 - 🛑 **Human-in-the-Loop (HITL)** - Built-in interrupt handling for agent approval flows
+- 📋 **Deep Agent Todos** - Built-in "Agent Plan" progress card that tracks multi-step agent tasks in real time
 
 ## Installation
 
@@ -686,6 +687,106 @@ function MyComponent() {
 }
 ```
 
+## Deep Agent Todos
+
+When your agent works through a multi-step plan, it can expose a `todos` list in its LangGraph state. The library automatically picks this up and renders an **"Agent Plan"** card above the agent's response — showing a progress bar, the currently active step, and a status-icon list of all tasks.
+
+### What it looks like
+
+```
+┌─────────────────────────────────────────┐
+│ ✦ Agent Plan               2 / 4 done   │
+│   Now: Analysing purchase history       │
+│ ████████░░░░░░░░░░░░  50%               │
+│                                         │
+│  ✓  Fetch customer profile              │
+│  ✓  Load order history                  │
+│  ⟳  Analysing purchase history          │
+│  ○  Generate recommendations            │
+└─────────────────────────────────────────┘
+```
+
+Status icons: `✓` completed · `⟳` in_progress (spinning) · `○` pending
+
+### Agent-side setup (Python)
+
+Add a `todos` field to your LangGraph state and update it as your agent progresses through steps:
+
+```python
+from typing import TypedDict, Literal
+from langgraph.graph import StateGraph
+
+class TodoItem(TypedDict):
+    id: str
+    content: str
+    status: Literal["pending", "in_progress", "completed"]
+
+class AgentState(TypedDict):
+    messages: list
+    todos: list[TodoItem]
+
+def plan_node(state: AgentState):
+    return {
+        "todos": [
+            {"id": "1", "content": "Fetch customer profile",       "status": "pending"},
+            {"id": "2", "content": "Load order history",           "status": "pending"},
+            {"id": "3", "content": "Analyse purchase history",     "status": "pending"},
+            {"id": "4", "content": "Generate recommendations",     "status": "pending"},
+        ]
+    }
+
+def step_1(state: AgentState):
+    # Mark step 1 in_progress, then completed when done
+    return {
+        "todos": [
+            {"id": "1", "content": "Fetch customer profile",       "status": "completed"},
+            {"id": "2", "content": "Load order history",           "status": "in_progress"},
+            {"id": "3", "content": "Analyse purchase history",     "status": "pending"},
+            {"id": "4", "content": "Generate recommendations",     "status": "pending"},
+        ]
+    }
+
+# ... continue updating todos in each node
+```
+
+The UI reads `todos` directly from the LangGraph state values — no extra configuration needed on the frontend.
+
+### How the UI handles it
+
+- **During streaming** — the `todos` list updates live as the agent emits new state values. The progress bar and "Now: …" subtitle reflect the current `in_progress` item.
+- **After streaming** — the final todos are frozen against the message group, so the card persists correctly when scrolling back through history.
+- **Subgraph support** — when `streamSubgraphs: true`, the library scans nested update events for non-empty `todos` arrays so subgraph nodes don't accidentally overwrite the parent's todo state.
+- **Empty arrays** — if an event contains `todos: []` (common in subgraph value events that don't own the todos state), the previous todos are preserved rather than cleared.
+
+### `TodoItem` type
+
+```typescript
+import type { TodoItem } from 'langgraph-ui-components';
+
+type TodoItem = {
+  id: string;
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+  updatedAt?: string | number | Date;   // raw JSON value from stream, not normalized
+  run_id?: string;
+  runId?: string;
+  messageId?: string;
+  checkpoint?: string;
+};
+```
+
+### Enabling tool call indicators alongside todos
+
+`enableToolCallIndicator` must be `true` (the default) for the Agent Plan card to appear, since the card is part of the agent message rendering pipeline:
+
+```tsx
+<Sidebar enableToolCallIndicator={true} />
+// or
+<Chat enableToolCallIndicator={true} />
+```
+
+---
+
 ## chatBodyProps
 
 The `chatBodyProps` prop on both `Chat` and `Sidebar` customizes how agent messages are displayed:
@@ -716,7 +817,8 @@ Full TypeScript definitions available for:
 - `ThreadMode` — `"single" | "multi"`
 - `ThreadConfiguration` — `Record<string, unknown>` passed to LangGraph config
 - `ThreadContextType` — `useThread()` return type
-- `StateType` — `{ messages, ui?, suggestions? }`
+- `StateType` — `{ messages, ui?, suggestions?, todos? }`
+- `TodoItem` — `{ id, content, status, updatedAt?, run_id?, runId?, messageId?, checkpoint? }`
 - `CustomComponentContextValue` — `useCustomComponents()` return type
 - `InterruptComponentProps` — props for HITL interrupt components
 - `CustomTool` — `{ label, icon, alt?, onClick }`
