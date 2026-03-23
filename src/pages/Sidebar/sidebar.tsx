@@ -159,11 +159,11 @@ export default function Sidebar(props: ChatSidebarProps) {
       content: contentBlocks,
     };
 
-    // Use the unified submitMessage function
-    await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
-
     setInput("");
     setFileInput([]);
+
+    // Use the unified submitMessage function
+    await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
   };
 
   const defaultHandleFileSelect = async (
