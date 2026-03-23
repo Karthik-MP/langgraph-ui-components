@@ -51,12 +51,12 @@ export default function TodoList({ todos }: { todos: TodoItem[] }) {
       </div>
 
       <ul className="space-y-1.5">
-        {todos.map((todo, i) => {
+        {todos.map((todo) => {
           const config = statusConfig[todo.status];
           const Icon = config.icon;
           return (
             <li
-              key={i}
+              key={todo.id}
               className="group flex items-center gap-2 rounded-lg border border-zinc-800/80 bg-zinc-900/45 px-2.5 py-2 transition-colors duration-200 hover:border-zinc-700/80"
             >
               <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${config.iconClass}`} />

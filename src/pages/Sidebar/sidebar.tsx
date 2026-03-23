@@ -159,11 +159,20 @@ export default function Sidebar(props: ChatSidebarProps) {
       content: contentBlocks,
     };
 
+    // Clear input optimistically, but restore on failure so the user doesn't lose their draft.
+    const savedInput = input;
+    const savedFileInput = fileInput;
     setInput("");
     setFileInput([]);
 
-    // Use the unified submitMessage function
-    await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
+    try {
+      // Use the unified submitMessage function
+      await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
+    } catch (err) {
+      setInput(savedInput);
+      setFileInput(savedFileInput);
+      throw err;
+    }
   };
 
   const defaultHandleFileSelect = async (
