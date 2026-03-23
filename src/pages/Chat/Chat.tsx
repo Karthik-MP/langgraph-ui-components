@@ -87,12 +87,12 @@ export function Chat(chatProps?: ChatUIProps) {
             content: contentBlocks,
         };
 
-        // Use the unified submitMessage function
-        await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
-
         setIsFirstMessage(false);
         setInput("");
         setFileInput([]);
+
+        // Use the unified submitMessage function
+        await stream.submitMessage(newHumanMessage, { contextValues: contextValues });
     };
 
     const defaultHandleFileSelect = async (

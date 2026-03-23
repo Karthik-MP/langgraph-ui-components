@@ -1,8 +1,10 @@
 import { cn } from "@/utils/tailwindUtil";
+import type { TodoItem } from "@/providers/Stream";
 import { getContentString } from "@/utils/utils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { BotMessageSquare, ChevronRight, LoaderCircle, Sparkles, Wrench } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import TodoList from "../TodoList";
 import { AgentMarkdown } from "../ui/AgentMarkdown";
 import { BranchSwitcher } from "./BranchSwitcher";
 import { MessageActions, type MessageFeedback } from "./MessageActions";
@@ -367,6 +369,7 @@ function AgentMessage({
   branch,
   branchOptions,
   onBranchSelect,
+  todos,
 }: {
   agentName?: string;
   fontSize?: string;
@@ -380,6 +383,7 @@ function AgentMessage({
   branch?: string;
   branchOptions?: string[];
   onBranchSelect?: (branch: string) => void;
+  todos?: TodoItem[];
 }) {
   const content = getContentString(message?.content);
   const inlineContent = renderContentInline(groupedMessages ?? [message], showToolActivity, isStreaming, fontSize);
@@ -396,6 +400,7 @@ function AgentMessage({
         <span className="text-zinc-500 text-sm">{agentName || "Agent"}</span>
       </div>
       <div className="flex flex-1 flex-col gap-1 items-start min-w-0">
+        {todos && todos.length > 0 && <TodoList todos={todos} />}
         <div className="text-content text-foreground" style={fontSize ? { fontSize } : undefined}>
           {inlineContent ? (
             inlineContent
@@ -455,6 +460,7 @@ export default React.memo(AgentMessage, (prevProps, nextProps) => {
     prevProps.onFeedback === nextProps.onFeedback &&
     prevProps.branch === nextProps.branch &&
     prevProps.branchOptions?.length === nextProps.branchOptions?.length &&
-    prevProps.onBranchSelect === nextProps.onBranchSelect
+    prevProps.onBranchSelect === nextProps.onBranchSelect &&
+    prevProps.todos === nextProps.todos
   );
 });

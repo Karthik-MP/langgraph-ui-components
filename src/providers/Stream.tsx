@@ -27,10 +27,22 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useThread } from "./Thread";
 
+export type TodoItem = {
+  id: string;
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+  updatedAt?: Date;
+  run_id?: string;
+  runId?: string;
+  messageId?: string;
+  checkpoint?: string;
+};
+
 export type StateType = {
   messages: Message[];
   ui?: UIMessage[];
   suggestions?: string[];
+  todos?: TodoItem[];
 };
 
 const useTypedStream = useStream<
@@ -174,33 +186,60 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
 
       scan(data);
 
-      if (enrichedMessages.length > 0) {
+      // Also scan for todos in update data — this keeps todos alive even when
+      // subgraph values events (which have todos: []) would overwrite them.
+      let foundTodos: unknown[] | null = null;
+      const scanTodos = (obj: unknown) => {
+        if (!obj || typeof obj !== "object") return;
+        const o = obj as Record<string, unknown>;
+        if (Array.isArray(o.todos) && o.todos.length > 0) {
+          foundTodos = o.todos;
+        }
+        for (const val of Object.values(o)) {
+          if (val && typeof val === "object" && !Array.isArray(val)) {
+            scanTodos(val);
+          }
+        }
+      };
+      scanTodos(data);
+
+      if (enrichedMessages.length > 0 || foundTodos) {
         options.mutate((prev) => {
-          const prevMessages = (prev.messages ?? []) as Message[];
-          const enrichedById = new Map<string, Message>();
-          for (const m of enrichedMessages) {
-            if (m.id) enrichedById.set(m.id, m);
+          let result = prev;
+
+          if (enrichedMessages.length > 0) {
+            const prevMessages = (result.messages ?? []) as Message[];
+            const enrichedById = new Map<string, Message>();
+            for (const m of enrichedMessages) {
+              if (m.id) enrichedById.set(m.id, m);
+            }
+
+            let changed = false;
+            const updatedMessages = prevMessages.map((m) => {
+              if (!m.id || !enrichedById.has(m.id)) return m;
+              const enriched = enrichedById.get(m.id)!;
+              enrichedById.delete(m.id);
+              changed = true;
+              const enrichedKwargs = (enriched as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+              return {
+                ...m,
+                additional_kwargs: {
+                  ...(m.additional_kwargs ?? {}),
+                  ...(enrichedKwargs ?? {}),
+                },
+              };
+            });
+
+            if (changed) {
+              result = { ...result, messages: updatedMessages };
+            }
           }
 
-          let changed = false;
-          const updatedMessages = prevMessages.map((m) => {
-            if (!m.id || !enrichedById.has(m.id)) return m;
-            const enriched = enrichedById.get(m.id)!;
-            enrichedById.delete(m.id);
-            changed = true;
-            const enrichedKwargs = (enriched as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
-            return {
-              ...m,
-              additional_kwargs: {
-                ...(m.additional_kwargs ?? {}),
-                ...(enrichedKwargs ?? {}),
-              },
-            };
-          });
+          if (foundTodos) {
+            result = { ...result, todos: foundTodos as TodoItem[] };
+          }
 
-          if (!changed) return prev;
-
-          return { ...prev, messages: updatedMessages };
+          return result === prev ? prev : result;
         });
       }
     },
