@@ -28,7 +28,7 @@ export { useModels } from "./hooks/use-models";
 export type { ChatIdentity } from "./providers/ChatRuntime";
 export type { ChatRuntimeContextValue } from "./providers/ChatRuntime";
 export type { ThreadMode, ThreadConfiguration, ThreadContextType } from "./providers/Thread";
-export type { StateType } from "./providers/Stream";
+export type { StateType, TodoItem } from "./providers/Stream";
 export type { SuggestionsOptions, SuggestionConfig } from "./providers/useChatSuggestions";
 
 // ─── Types: Component props ───────────────────────────────────────────────────
