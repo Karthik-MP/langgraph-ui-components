@@ -9,21 +9,29 @@ export interface headerProps {
 export interface chatBodyProps {
     agentName?: string;
     agentAvatarUrl?: string;
+    fontSize?: string;
 }
 
 export interface CallThisOnSubmitResponse {
     files?: FileInfo[];
-    contextValues?: Record<string, any>;
+    contextValues?: Record<string, unknown>;
 }
 
-interface ChatProps {
+export interface textToSpeechVoice {
+    apiUrl: string;
+    apiKey: string;
+    model: string;
+}
+
+export interface ChatProps {
     inputFileAccept?: string;
     enableToolCallIndicator?: boolean;
     handleFileSelect?: (e: FormEvent) => void;
     callThisOnSubmit?: () => Promise<CallThisOnSubmitResponse | void>;
     header?: headerProps;
     chatBodyProps?: chatBodyProps;
-    supportSpeechToText?: boolean;
+    /** Optional text-to-speech voice configuration */
+    textToSpeechVoice?: textToSpeechVoice;
 }
 
 export interface ChatSidebarProps extends ChatProps {
@@ -35,6 +43,8 @@ export interface ChatSidebarProps extends ChatProps {
     leftPanelContent?: React.ReactNode;
     leftPanelOpen?: boolean;
     setLeftPanelOpen?: Dispatch<SetStateAction<boolean>>;
+    leftPanelInitialWidth?: number;
+    leftPanelClassName?: string;
 }
 
 export interface ChatUIProps extends ChatProps {

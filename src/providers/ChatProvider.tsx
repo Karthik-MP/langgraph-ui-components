@@ -1,4 +1,5 @@
 import React from "react";
+import type { ChatIdentity } from "./ChatRuntime";
 import { ChatRuntimeProvider } from "./ChatRuntime";
 import { CustomComponentProvider } from "./CustomComponentProvider";
 import { FileProvider } from "./FileProvider";
@@ -6,16 +7,8 @@ import { StreamProvider } from "./Stream";
 import { ThreadProvider } from "./Thread";
 import { SuggestionProvider } from "./useChatSuggestions";
 
-/**
- * Identity information for authenticating and identifying the chat user.
- * Used for routing messages and maintaining user context in the chat system.
- */
-export interface ChatIdentity {
-  /** Unique identifier for the user */
-  user_id: string;
-  /** Organization identifier for multi-tenant applications */
-  org_id: string;
-}
+// Re-export the canonical ChatIdentity so consumers can import it from either location.
+export type { ChatIdentity };
 
 interface ChatProviderProps {
   /** Base URL for the LangGraph API endpoint */
@@ -28,6 +21,16 @@ interface ChatProviderProps {
   children: React.ReactNode;
   /** Optional custom React components to render in chat messages */
   customComponents?: Record<string, React.FunctionComponent | React.ComponentClass>;
+  /**
+   * Fallback UI shown while the chat providers are lazy-loading.
+   * Defaults to a plain `<div>Loading chat...</div>` if not provided.
+   */
+  suspenseFallback?: React.ReactNode;
+  /**
+   * Initial thread mode. Use `"multi"` to enable thread history and switching.
+   * Defaults to `"single"` (one conversation, no history panel).
+   */
+  initialMode?: "single" | "multi";
 }
 
 /**
@@ -37,10 +40,21 @@ interface ChatProviderProps {
  * 
  * @example
  * ```tsx
+ * // Single-thread mode (default)
  * <ChatProvider
  *   apiUrl="https://api.example.com"
  *   assistantId="my-assistant"
  *   identity={{ user_id: "user123", org_id: "org456" }}
+ * >
+ *   <YourChatUI />
+ * </ChatProvider>
+ *
+ * // Multi-thread mode (enables thread history)
+ * <ChatProvider
+ *   apiUrl="https://api.example.com"
+ *   assistantId="my-assistant"
+ *   identity={{ user_id: "user123", org_id: "org456" }}
+ *   initialMode="multi"
  * >
  *   <YourChatUI />
  * </ChatProvider>
@@ -52,15 +66,17 @@ export function ChatProvider({
   identity,
   children,
   customComponents,
+  suspenseFallback = <div>Loading chat...</div>,
+  initialMode = "single",
 }: ChatProviderProps) {
   return (
-    <React.Suspense fallback={<div>Loading chat...</div>}>
+    <React.Suspense fallback={suspenseFallback}>
       <ChatRuntimeProvider
         apiUrl={apiUrl}
         assistantId={assistantId}
         identity={identity}
       >
-        <ThreadProvider>
+        <ThreadProvider initialMode={initialMode}>
           <StreamProvider>
             <SuggestionProvider>
               <CustomComponentProvider initialComponents={customComponents}>

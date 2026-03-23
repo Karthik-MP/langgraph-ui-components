@@ -1,6 +1,6 @@
 import type { FileInfo } from "@/types/fileInput";
-import { MoveUp, Paperclip, Loader2, Mic, Square } from "lucide-react";
-import {
+import { MoveUp, Paperclip, Loader2, Mic, Square, ChevronDown, Check } from "lucide-react";
+import React, {
   type ChangeEvent,
   type Dispatch,
   type FormEvent,
@@ -8,14 +8,19 @@ import {
   useState,
   type DragEvent,
   useRef,
+  useEffect,
 } from "react";
+import { createPortal } from "react-dom";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import type { textToSpeechVoice } from "@/types/ChatProps";
+import { useModels } from "@/hooks/use-models";
+import { cn } from "@/utils/tailwindUtil";
 
 export default function ChatInput({
   input,
   inputFileAccept = ".png,.jpg,.jpeg,.pdf,.docx",
   setInput,
-  supportSpeechToText = false,
+  textToSpeechVoice,
   handleSubmit,
   fileInput,
   setFileInput,
@@ -26,7 +31,7 @@ export default function ChatInput({
 }: {
   input: string;
   setInput: (value: string) => void;
-  supportSpeechToText?: boolean;
+  textToSpeechVoice?: textToSpeechVoice;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
   fileInput: FileInfo[];
   setFileInput: Dispatch<SetStateAction<FileInfo[]>>;
@@ -42,6 +47,9 @@ export default function ChatInput({
   const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const { models, selectedModel, setSelectedModel } = useModels();
+  const modelItems = models.map((m) => ({ id: m.id, label: m.name || m.id }));
+
   // Audio recording and transcription
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, transcribeAudio } = useAudioRecorder();
 
@@ -49,19 +57,25 @@ export default function ChatInput({
     if (isRecording) {
       // Stop recording and transcribe
       const audioBlob = await stopRecording();
-      console.log("Audio blob received:", audioBlob?.size, "bytes");
 
       if (audioBlob) {
         try {
-          console.log("Sending audio to backend for transcription...");
-          const transcribedText = await transcribeAudio(audioBlob);
-          console.log("Transcription received:", transcribedText);
+          const transcribedText = await transcribeAudio(audioBlob, textToSpeechVoice?.apiKey || "", textToSpeechVoice?.apiUrl || "", textToSpeechVoice?.model || "Systran/faster-whisper-small");
 
           if (transcribedText) {
             setInput(transcribedText);
+            // Expand textarea to fit content
+            if (textareaRef.current) {
+              setTimeout(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = "auto";
+                  const maxHeight = 300;
+                  textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, maxHeight) + "px";
+                }
+              }, 0);
+            }
           }
         } catch (error) {
-          console.error("Error processing audio:", error);
           alert("Failed to transcribe audio. Please try again.");
         }
       }
@@ -201,14 +215,14 @@ export default function ChatInput({
           />
 
           {/* Microphone Button */}
-          {supportSpeechToText && (
+          {textToSpeechVoice?.apiKey && textToSpeechVoice?.apiUrl && textToSpeechVoice?.model && (
             <button
               type="button"
               onClick={handleMicClick}
               disabled={isLoading || isTranscribing}
               className={`${isRecording
-                  ? "text-red-500 hover:bg-red-900/20"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                ? "text-red-500 hover:bg-red-900/20"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
                 } rounded p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
               title={isRecording ? `Recording... ${recordingTime}s` : "Record audio"}
             >
@@ -223,6 +237,16 @@ export default function ChatInput({
               <Loader2 size={14} className="animate-spin" />
               Transcribing...
             </span>
+          )}
+
+          {modelItems.length > 1 && (
+            <DropdownSelector
+              items={modelItems}
+              selected={selectedModel}
+              onSelect={setSelectedModel}
+              placeholder="Model"
+              maxWidth={160}
+            />
           )}
 
           {isLoading && onCancel && (
@@ -250,5 +274,109 @@ export default function ChatInput({
         </div>
       </div>
     </form>
+  );
+}
+
+function DropdownSelector<T extends { id: string; label: string }>({
+  items,
+  selected,
+  onSelect,
+  placeholder,
+  maxWidth = 160,
+  maxLength = 20,
+  dropDown = false,
+}: {
+  items: T[];
+  selected: string;
+  onSelect: (id: string) => void;
+  placeholder: string;
+  maxWidth?: number;
+  maxLength?: number;
+  dropDown?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        buttonRef.current && !buttonRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    if (dropDown) {
+      setMenuStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    } else {
+      setMenuStyle({
+        position: "fixed",
+        bottom: window.innerHeight - rect.top + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [open, dropDown]);
+
+  const selectedItem = items.find((i) => i.id === selected);
+  const fullLabel = selectedItem?.label || placeholder;
+  const displayLabel =
+    fullLabel.length > maxLength
+      ? `${fullLabel.slice(0, Math.max(0, maxLength - 1))}…`
+      : fullLabel;
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white"
+      >
+        <span className="truncate" style={{ maxWidth }} title={fullLabel}>
+          {displayLabel}
+        </span>
+        <ChevronDown className={cn("size-3 shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={menuStyle}
+          className="z-[9999] min-w-[14rem] max-h-[19rem] overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 text-white p-1 shadow-lg [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-600 [&::-webkit-scrollbar-track]:bg-transparent"
+        >
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onSelect(item.id);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white",
+                item.id === selected && "bg-zinc-800 font-medium text-white",
+              )}
+            >
+              <span className="truncate">{item.label}</span>
+              {item.id === selected && <Check className="size-4 shrink-0 text-zinc-300" />}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
   );
 }

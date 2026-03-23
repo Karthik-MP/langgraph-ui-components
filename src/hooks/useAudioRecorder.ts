@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from "react";
 import { webmFixDuration } from "../utils/BlobFix";
-import { useChatRuntime } from "@/providers/ChatRuntime";
 
 function getMimeType() {
     const types = [
@@ -19,7 +18,6 @@ function getMimeType() {
 }
 
 export function useAudioRecorder() {
-    const { identity } = useChatRuntime();
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -105,15 +103,12 @@ export function useAudioRecorder() {
         });
     }, []);
 
-    const transcribeAudio = useCallback(async (audioBlob: Blob): Promise<string> => {
+    const transcribeAudio = useCallback(async (audioBlob: Blob, apiKey: string, apiUrl: string, model: string): Promise<string> => {
         setIsTranscribing(true);
         try {
-            const apiUrl = identity?.textToSpeechVoice?.apiUrl || "";
-            const apiKey = identity?.textToSpeechVoice?.apiKey;
-
             const formData = new FormData();
             formData.append("file", audioBlob, "audio.webm");
-            formData.append("model", identity?.textToSpeechVoice?.model || "Systran/faster-whisper-large-v3");
+            formData.append("model", model);
             formData.append("response_format", "json");
 
             const headers: HeadersInit = {};
@@ -139,7 +134,7 @@ export function useAudioRecorder() {
         } finally {
             setIsTranscribing(false);
         }
-    }, [identity]);
+    }, []);
 
     const cancelRecording = useCallback(() => {
         if (mediaRecorderRef.current) {

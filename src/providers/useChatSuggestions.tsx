@@ -22,9 +22,12 @@ type InternalSuggestionsOptions = SuggestionsOptions & {
 
 type SuggestionConfig = {
     options: SuggestionsOptions;
-    deps: any[];
+    deps: unknown[];
     isEnabled: boolean;
 };
+
+/** @public Export SuggestionConfig so consumers can pre-configure suggestion state */
+export type { SuggestionConfig };
 
 type SuggestionContextValue = {
     config: SuggestionConfig | null;
@@ -74,7 +77,7 @@ export function useSuggestionConfig() {
  */
 export function useChatSuggestions(
     opts: SuggestionsOptions = {},
-    deps: any[] = []
+    deps: unknown[] = []
 ): void {
     const { setConfig } = useSuggestionConfig();
 

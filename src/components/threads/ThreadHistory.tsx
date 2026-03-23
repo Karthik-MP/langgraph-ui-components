@@ -37,7 +37,7 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
         if (!searchQuery.trim()) return true;
 
         const searchLower = searchQuery.toLowerCase();
-        const threadName = (t.metadata?.name as string) || "";
+        const threadName = (t.metadata?.name as string) || (t.metadata?.threadName as string) || (t.metadata?.thread_name as string) || "";
 
         // Check thread name
         if (threadName.toLowerCase().includes(searchLower)) return true;
@@ -50,6 +50,11 @@ export default function ThreadHistory({ header, isSidebar, onClose }: { header?:
         }
 
         return false;
+    }).sort((a, b) => {
+        // Sort by updated_at in descending order (most recent first)
+        const dateA = new Date(a.updated_at).getTime();
+        const dateB = new Date(b.updated_at).getTime();
+        return dateB - dateA;
     });
 
     return (
@@ -220,7 +225,7 @@ function ThreadList({
 
     const handleRenameSubmit = async (thread: Thread) => {
         const threadValues = thread.values as any;
-        const originalName = thread.metadata?.name ||
+        const originalName = (thread.metadata?.name as string) || (thread.metadata?.threadName as string) || (thread.metadata?.thread_name as string) ||
             (threadValues?.messages?.[0] ? getContentString(threadValues.messages[0].content) : thread.thread_id);
 
         if (editValue.trim() && editValue.trim() !== originalName) {
@@ -250,7 +255,7 @@ function ThreadList({
             switch (action) {
                 case 'rename': {
                     const threadValues = thread.values as any;
-                    const currentName: string = (thread.metadata?.name as string) ||
+                    const currentName: string = (thread.metadata?.name as string) || (thread.metadata?.threadName as string) || (thread.metadata?.thread_name as string) ||
                         (threadValues?.messages?.[0] ? getContentString(threadValues.messages[0].content) : thread.thread_id);
                     setEditValue(currentName);
                     setEditingThread(thread.thread_id);
@@ -286,17 +291,24 @@ function ThreadList({
     return (
         <div className="flex h-full w-full flex-col items-start justify-start gap-2">
             {threads.map((t) => {
-                let itemText: string = (t.metadata?.name as string) || t.thread_id;
-                if (
-                    !t.metadata?.name &&
+                // Check metadata first for thread name
+                let itemText = (t.metadata?.name as string) || (t.metadata?.threadName as string) || (t.metadata?.thread_name as string);
+                
+                // If no metadata name, try first message
+                if (!itemText && 
                     typeof t.values === "object" &&
                     t.values &&
                     "messages" in t.values &&
-                    Array.isArray((t.values as any).messages) &&
-                    (t.values as any).messages?.length > 0
+                    Array.isArray(t.values.messages) &&
+                    t.values.messages?.length > 0
                 ) {
-                    const firstMessage = (t.values as any).messages[0];
+                    const firstMessage = t.values.messages[0];
                     itemText = getContentString(firstMessage.content);
+                }
+                
+                // Fallback to thread_id
+                if (!itemText) {
+                    itemText = t.thread_id;
                 }
 
                 const isEditing = editingThread === t.thread_id;
@@ -304,7 +316,7 @@ function ThreadList({
                 return (
                     <div
                         key={t.thread_id}
-                        className="relative w-full rounded-md hover:bg-zinc-800 group"
+                        className={`relative w-full rounded-md group ${t.thread_id === threadId ? "bg-zinc-700/60" : "hover:bg-zinc-800"}`}
                         onMouseEnter={() => setHoveredThread(t.thread_id)}
                         onMouseLeave={() => setHoveredThread(null)}
                     >
@@ -339,7 +351,7 @@ function ThreadList({
                                         <p className="truncate text-ellipsis text-sm text-white/80">{itemText}</p>
                                     </button>
                                     <span className="flex-shrink-0 text-xs text-white/40 ml-2">
-                                        {formatRelativeTime(t.created_at)}
+                                        {formatRelativeTime(t.updated_at)}
                                     </span>
                                 </div>
                             )}

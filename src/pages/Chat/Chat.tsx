@@ -8,12 +8,13 @@ import { useStreamContext } from "@/providers/Stream";
 import { useThread } from "@/providers/Thread";
 import type { ChatUIProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
+import { buildContentBlocks, readFilesAsBase64 } from "@/utils/submitUtils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { useEffect, useState, type FormEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
-    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps, supportSpeechToText } = chatProps || {};
+export function Chat(chatProps?: ChatUIProps) {
+    const { callThisOnSubmit, handleFileSelect, enableToolCallIndicator, chatBodyProps, textToSpeechVoice } = chatProps || {};
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [input, setInput] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -27,13 +28,20 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
 
     useEffect(() => {
         // Fetch the agent catalog on component mount
-        fetchCatalog();
-        setAgents(["V3ya_external_agent", "chat_agent"]);
+        const fetchAgents = async () => {
+            const data = await fetchCatalog() as { agents?: { graph_id?: string }[] } | null;
+
+            const agentList = Array.isArray(data?.agents) ? data.agents : [];
+            const agentIds = agentList
+                .map((item) => item?.graph_id)
+                .filter((id): id is string => typeof id === "string" && id.length > 0);
+            setAgents(agentIds);
+        };
+        fetchAgents();
     }, [fetchCatalog]);
 
     const handleAgentChange = (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
         const selectedAgent = (event.target as HTMLElement).innerText;
-        console.log("Selected agent:", selectedAgent);
         setAssistantId(selectedAgent);
         setIsDropdownOpen(false);
     }
@@ -45,12 +53,15 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
     }, [setMode]);
 
     // Update isFirstMessage based on thread messages
+    // Only show first message screen when no thread exists AND no messages
     useEffect(() => {
         if (stream.messages && stream.messages.length > 0) {
             setIsFirstMessage(false);
-        } else {
+        } else if (!threadId) {
+            // Only reset to true if we don't have an active thread
             setIsFirstMessage(true);
         }
+        // Don't set to true if we have a threadId but messages are temporarily empty (loading)
     }, [threadId, stream.messages]);
 
     const defaultHandleSubmit = async (e: FormEvent) => {
@@ -59,7 +70,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
             return;
 
         let latestFiles: FileInfo[] = fileInput;
-        let contextValues: Record<string, any> | undefined = undefined;
+        let contextValues: Record<string, unknown> | undefined = undefined;
         if (callThisOnSubmit) {
             const result = await callThisOnSubmit();
             if (Array.isArray(result?.files) && result.files.length > 0) {
@@ -68,16 +79,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
             if (result && result?.contextValues) contextValues = result.contextValues;
         }
 
-        // console.log("Using files for submission:", latestFiles);
-
-        const contentBlocks = [
-            ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-            ...latestFiles.map((file) => ({
-                type: "document" as const,
-                ...file,
-                cache_control: { type: "ephemeral" as const },
-            })),
-        ] as unknown as Message["content"];
+        const contentBlocks = buildContentBlocks(input, latestFiles);
 
         const newHumanMessage: Message = {
             id: uuidv4(),
@@ -98,28 +100,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
     ) => {
         const files = event.target.files;
         if (!files) return;
-
-        const fileDetails: FileInfo[] = await Promise.all(
-            Array.from(files).map(async (file) => {
-                const base64Data = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const result = reader.result as string;
-                        resolve(result.split(",")[1]);
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-
-                return {
-                    fileName: file.name,
-                    fileType: file.type,
-                    file: file,
-                    fileData: base64Data, // Add this to your FileInfo type
-                };
-            })
-        );
-
+        const fileDetails = await readFilesAsBase64(files);
         setFileInput((prevFile) => [...prevFile, ...fileDetails]);
     };
 
@@ -166,14 +147,14 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                             </h1>
 
                             <div className="w-full max-w-2xl px-4">
-                                <ChatInput input={input} setInput={setInput} supportSpeechToText={supportSpeechToText} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
+                                <ChatInput input={input} setInput={setInput} textToSpeechVoice={textToSpeechVoice} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                             </div>
                         </div> :
                         // =========================
                         // CHAT STATE (after message)
                         // =========================
                         <div className="flex h-full w-full flex-col">
-                            <div className="flex-1 overflow-y-auto thread-scrollbar">
+                            <div className="flex-1 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
                                 <div className="mx-auto max-w-3xl px-4 py-6">
                                     <ChatBody setIsFirstMessage={setIsFirstMessage} enableToolCallIndicator={enableToolCallIndicator} chatBodyProps={chatBodyProps} />
                                 </div>
@@ -183,7 +164,7 @@ export function Chat({ chatProps }: { chatProps?: ChatUIProps }) {
                             </div>
                             <div className="border-t border-white/10 p-1">
                                 <div className="mx-auto max-w-3xl">
-                                    <ChatInput input={input} setInput={setInput} supportSpeechToText={supportSpeechToText} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
+                                    <ChatInput input={input} setInput={setInput} textToSpeechVoice={textToSpeechVoice} handleSubmit={defaultHandleSubmit} fileInput={fileInput} setFileInput={setFileInput} handleFileSelect={onFileSelect} />
                                 </div>
                             </div>
                         </div>
