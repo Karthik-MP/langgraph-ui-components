@@ -87,7 +87,6 @@ export default function Thinking() {
                 }
             `}</style>
             <div className="loader-wrapper">
-                <div className="loader"></div>
                 <div className="letter-wrapper">
                     <span className="loader-letter">T</span>
                     <span className="loader-letter">h</span>
