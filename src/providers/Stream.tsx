@@ -6,7 +6,7 @@ import { type AIMessage, type Message } from "@langchain/langgraph-sdk";
 // Derive the tool-call types from AIMessage since the SDK doesn't re-export them
 type ToolCall = NonNullable<AIMessage["tool_calls"]>[number];
 type InvalidToolCall = NonNullable<AIMessage["invalid_tool_calls"]>[number];
-import { useStream, type UseStream } from "@langchain/langgraph-sdk/react";
+import { useStream } from "@langchain/langgraph-sdk/react";
 import {
   isRemoveUIMessage,
   isUIMessage,
@@ -31,7 +31,7 @@ export type TodoItem = {
   id: string;
   content: string;
   status: "pending" | "in_progress" | "completed";
-  updatedAt?: Date;
+  updatedAt?: string | number | Date;
   run_id?: string;
   runId?: string;
   messageId?: string;
@@ -56,14 +56,7 @@ const useTypedStream = useStream<
   }
 >;
 
-type StreamContextType = UseStream<StateType, {
-  UpdateType: {
-
-    messages?: Message[] | Message | string;
-    ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
-  };
-  CustomEventType: UIMessage | RemoveUIMessage;
-}> & {
+type StreamContextType = ReturnType<typeof useTypedStream> & {
   sendMessage: (
     message: Message | string,
     options?: {
@@ -186,14 +179,21 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
 
       scan(data);
 
-      // Also scan for todos in update data — this keeps todos alive even when
-      // subgraph values events (which have todos: []) would overwrite them.
-      let foundTodos: unknown[] | null = null;
+      // Scan update data for todos. We track whether the field was present at all
+      // (foundTodos !== undefined) vs absent (foundTodos === undefined), so we can
+      // distinguish "event has todos: []" (preserve previous) from "event has no
+      // todos field" (don't touch).  A non-empty array updates the stored todos.
+      // To explicitly clear todos, the backend should send a dedicated signal
+      // (e.g. a custom event) rather than relying on an empty array.
+      let foundTodos: unknown[] | undefined;
       const scanTodos = (obj: unknown) => {
         if (!obj || typeof obj !== "object") return;
         const o = obj as Record<string, unknown>;
-        if (Array.isArray(o.todos) && o.todos.length > 0) {
-          foundTodos = o.todos;
+        if ("todos" in o && Array.isArray(o.todos)) {
+          // Prefer non-empty arrays; keep existing foundTodos if we already found one.
+          if (o.todos.length > 0 || foundTodos === undefined) {
+            foundTodos = o.todos;
+          }
         }
         for (const val of Object.values(o)) {
           if (val && typeof val === "object" && !Array.isArray(val)) {
@@ -203,7 +203,7 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
       };
       scanTodos(data);
 
-      if (enrichedMessages.length > 0 || foundTodos) {
+      if (enrichedMessages.length > 0 || foundTodos !== undefined) {
         options.mutate((prev) => {
           let result = prev;
 
@@ -235,8 +235,13 @@ const StreamSession = ({ children }: { children: ReactNode }) => {
             }
           }
 
-          if (foundTodos) {
-            result = { ...result, todos: foundTodos as TodoItem[] };
+          if (foundTodos !== undefined) {
+            // If the event delivered a non-empty array, update; if empty, preserve
+            // the previous value so subgraph events that don't own todos don't wipe them.
+            if (foundTodos.length > 0) {
+              result = { ...result, todos: foundTodos as TodoItem[] };
+            }
+            // foundTodos.length === 0: field was present but empty — keep prev.todos
           }
 
           return result === prev ? prev : result;
