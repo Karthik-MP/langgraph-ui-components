@@ -1,15 +1,177 @@
-import { cn } from "@/utils/tailwindUtil";
-import { CheckIcon, CopyIcon } from "lucide-react";
-import { type FC, useState } from "react";
+"use client";
+
+import "./markdown-styles.css";
+
 import ReactMarkdown from "react-markdown";
-import rehypeAutoLinkHeadings from "rehype-autolink-headings";
-import rehypeHighlight from "rehype-highlight";
-import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { SyntaxHighlighter } from "./syntax-highlighter";
+import remarkMath from "remark-math";
+import { type FC, memo, useState, useContext, createContext, useMemo } from "react";
+import { CheckIcon, CopyIcon, ChevronLeft, ChevronRight } from "lucide-react";
+
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
+
 import "katex/dist/katex.min.css";
+import { cn } from "@/utils/tailwindUtil";
+import { SyntaxHighlighter } from "./syntax-highlighter";
+import { TooltipIconButton } from "./tooltip-icon-button";
+
+interface LinkEntry {
+  url: string;
+  title: string;
+}
+
+const DomainGroupsContext = createContext<Map<string, LinkEntry[]>>(new Map());
+const FontSizeContext = createContext<string | undefined>(undefined);
+
+function formatPathAsTitle(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/$/, "");
+    if (!path || path === "/") return "";
+    const last = path.split("/").filter(Boolean).pop() ?? "";
+    return decodeURIComponent(last)
+      .replace(/[-_]/g, " ")
+      .replace(/\.\w+$/, "")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  } catch {
+    return "";
+  }
+}
+
+function LinkPill({
+  href,
+  domain,
+  displayLabel,
+  titleText,
+  className,
+  ...props
+}: {
+  href: string;
+  domain: string;
+  displayLabel: string;
+  titleText: string;
+  className?: string;
+}) {
+  const domainGroups = useContext(DomainGroupsContext);
+  const group = domainGroups.get(domain) ?? [{ url: href, title: titleText }];
+  const extra = group.length - 1;
+  const [pageIdx, setPageIdx] = useState(0);
+  const current = group[pageIdx] ?? group[0];
+
+  const currentTitle =
+    current.title && current.title !== domain
+      ? current.title
+      : formatPathAsTitle(current.url) || domain;
+
+  const pathDescription = (() => {
+    try {
+      const parsed = new URL(current.url);
+      return parsed.hostname + parsed.pathname;
+    } catch {
+      return "";
+    }
+  })();
+
+  return (
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <a
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md border border-border/30 bg-muted px-2 py-0.5 text-xs font-medium text-foreground/80 no-underline transition-colors hover:bg-muted/70",
+            className,
+          )}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          {...props}
+        >
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+            alt=""
+            className="size-3.5 shrink-0 rounded-sm"
+            loading="lazy"
+          />
+          <span className="max-w-[140px] truncate">{displayLabel}</span>
+          {extra > 0 && (
+            <span className="ml-0.5 rounded-full bg-muted-foreground/20 px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
+              +{extra}
+            </span>
+          )}
+        </a>
+      </HoverCardTrigger>
+      <HoverCardContent side="top" align="start" className="w-[320px] p-0">
+        {extra > 0 && (
+          <div className="flex items-center justify-between border-b border-border/40 px-3 py-2">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPageIdx((p) => Math.max(0, p - 1))}
+                disabled={pageIdx === 0}
+                className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronLeft className="size-3.5" />
+              </button>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {pageIdx + 1}/{group.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPageIdx((p) => Math.min(group.length - 1, p + 1))}
+                disabled={pageIdx === group.length - 1}
+                className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronRight className="size-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {group.slice(0, 2).map((g) => (
+                <img
+                  key={g.url}
+                  src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                  alt=""
+                  className="size-3.5 rounded-sm"
+                  loading="lazy"
+                />
+              ))}
+              <span className="text-xs text-muted-foreground">
+                {group.length} sources
+              </span>
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col gap-1.5 p-3">
+          <div className="flex items-center gap-2">
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+              alt=""
+              className="size-4 shrink-0 rounded-sm"
+              loading="lazy"
+            />
+            <span className="text-xs text-muted-foreground">{domain}</span>
+          </div>
+          <a
+            href={current.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="line-clamp-2 text-sm font-semibold leading-snug text-foreground no-underline transition-colors hover:text-teal-700 dark:hover:text-teal-400"
+          >
+            {currentTitle}
+          </a>
+          {pathDescription && (
+            <p className="line-clamp-1 text-xs text-muted-foreground/60">
+              {pathDescription}
+            </p>
+          )}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
 
 interface CodeHeaderProps {
   language?: string;
@@ -43,16 +205,15 @@ const CodeHeader: FC<CodeHeaderProps> = ({ language, code }) => {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-t-lg bg-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-200 border-b border-zinc-700">
-      <span className="lowercase text-xs font-mono">{language || "text"}</span>
-      <button
+    <div className="flex items-center justify-between gap-4 rounded-t-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white">
+      <span className="lowercase [&>span]:text-xs">{language}</span>
+      <TooltipIconButton
+        tooltip="Copy"
         onClick={onCopy}
-        className="p-1 rounded hover:bg-zinc-700 transition-colors"
-        title={isCopied ? "Copied!" : "Copy code"}
       >
-        {!isCopied && <CopyIcon size={16} />}
-        {isCopied && <CheckIcon size={16} className="text-green-400" />}
-      </button>
+        {!isCopied && <CopyIcon />}
+        {isCopied && <CheckIcon />}
+      </TooltipIconButton>
     </div>
   );
 };
@@ -61,7 +222,7 @@ const defaultComponents: any = {
   h1: ({ className, ...props }: { className?: string }) => (
     <h1
       className={cn(
-        "mb-6 mt-8 scroll-m-20 text-3xl font-bold tracking-tight text-zinc-100 first:mt-0 last:mb-0",
+        "mb-8 scroll-m-20 text-base font-extrabold tracking-tight sm:text-xl md:text-2xl last:mb-0",
         className,
       )}
       {...props}
@@ -70,7 +231,7 @@ const defaultComponents: any = {
   h2: ({ className, ...props }: { className?: string }) => (
     <h2
       className={cn(
-        "mt-8 mb-4 scroll-m-20 text-2xl font-semibold tracking-tight text-zinc-100 first:mt-0 last:mb-0 border-b border-zinc-800 pb-2",
+        "mt-8 mb-4 scroll-m-20 text-sm font-semibold tracking-tight sm:text-base md:text-xl first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -79,7 +240,7 @@ const defaultComponents: any = {
   h3: ({ className, ...props }: { className?: string }) => (
     <h3
       className={cn(
-        "mt-6 mb-3 scroll-m-20 text-xl font-semibold tracking-tight text-zinc-100 first:mt-0 last:mb-0",
+        "mt-6 mb-4 scroll-m-20 text-xs font-semibold tracking-tight sm:text-sm md:text-base first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -88,7 +249,7 @@ const defaultComponents: any = {
   h4: ({ className, ...props }: { className?: string }) => (
     <h4
       className={cn(
-        "mt-6 mb-3 scroll-m-20 text-lg font-semibold tracking-tight text-zinc-200 first:mt-0 last:mb-0",
+        "mt-6 mb-4 scroll-m-20 text-xs font-semibold tracking-tight sm:text-xs md:text-sm first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -97,7 +258,7 @@ const defaultComponents: any = {
   h5: ({ className, ...props }: { className?: string }) => (
     <h5
       className={cn(
-        "my-3 text-base font-semibold text-zinc-200 first:mt-0 last:mb-0",
+        "my-4 text-xs font-semibold sm:text-xs md:text-xs first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -105,83 +266,90 @@ const defaultComponents: any = {
   ),
   h6: ({ className, ...props }: { className?: string }) => (
     <h6
-      className={cn("my-3 text-sm font-semibold text-zinc-300 first:mt-0 last:mb-0", className)}
+      className={cn("my-4 text-xs font-semibold sm:text-xs md:text-xs first:mt-0 last:mb-0", className)}
       {...props}
     />
   ),
-  p: ({ className, ...props }: { className?: string }) => (
-    <p
-      className={cn("mb-5 leading-7 text-zinc-200 first:mt-0 last:mb-0", className)}  // Changed mb-4 to mb-5
-      {...props}
-    />
-  ),
-  a: ({ className, href, ...props }: { className?: string; href?: string }) => (
-    <a
-      href={href}
-      target={href?.startsWith('http') ? "_blank" : undefined}
-      rel={href?.startsWith('http') ? "noopener noreferrer" : undefined}
-      className={cn(
-        "text-blue-400 hover:text-blue-300 font-medium underline underline-offset-4 transition-colors",
-        className,
-      )}
-      {...props}
-    />
-  ),
+  p: ({ className, ...props }: { className?: string }) => {
+    const fontSize = useContext(FontSizeContext);
+    return (
+      <p
+        className={cn("mt-5 mb-5 leading-7 first:mt-0 last:mb-0", !fontSize && "text-sm sm:text-base", className)}
+        style={fontSize ? { fontSize } : undefined}
+        {...props}
+      />
+    );
+  },
+  a: ({
+    className,
+    href,
+    children,
+    ...props
+  }: {
+    className?: string;
+    href?: string;
+    children?: React.ReactNode;
+  }) => {
+    let domain = "";
+    const fullUrl = href ?? "";
+    try {
+      const url = new URL(fullUrl);
+      domain = url.hostname.replace(/^www\./, "");
+    } catch {
+      domain = String(children ?? href ?? "");
+    }
+
+    const displayLabel = domain || String(children ?? "");
+    const titleText = String(children ?? domain);
+
+    return (
+      <LinkPill
+        href={fullUrl}
+        domain={domain}
+        displayLabel={displayLabel}
+        titleText={titleText}
+        className={className}
+        {...props}
+      />
+    );
+  },
   blockquote: ({ className, ...props }: { className?: string }) => (
     <blockquote
-      className={cn(
-        "my-4 border-l-4 border-zinc-600 pl-4 italic text-zinc-300 bg-zinc-900/50 py-2 rounded-r",
-        className
-      )}
+      className={cn("border-l-2 pl-6 italic", className)}
       {...props}
     />
   ),
   ul: ({ className, ...props }: { className?: string }) => (
     <ul
-      className={cn(
-        "my-4 ml-6 space-y-2 list-none text-zinc-200",
-        className
-      )}
+      className={cn("my-5 ml-6 list-disc [&>li]:mt-2", className)}
       {...props}
     />
   ),
   ol: ({ className, ...props }: { className?: string }) => (
     <ol
-      className={cn("my-4 ml-8 list-decimal text-zinc-200 [&>li]:mt-2", className)}
-      {...props}
-    />
-  ),
-  li: ({ className, ...props }: { className?: string }) => (
-    <li
-      className={cn(
-        "leading-7 pl-6 relative before:content-['•'] before:absolute before:left-0 before:text-zinc-400 before:font-bold",
-        // This adds a bullet using CSS before pseudo-element with proper positioning
-        className
-      )}
+      className={cn("my-5 ml-6 list-decimal [&>li]:mt-2", className)}
       {...props}
     />
   ),
   hr: ({ className, ...props }: { className?: string }) => (
     <hr
-      className={cn("my-6 border-zinc-700", className)}
+      className={cn("my-5 border-b", className)}
       {...props}
     />
   ),
   table: ({ className, ...props }: { className?: string }) => (
-    <div className="my-4 w-full overflow-x-auto">
-      <table
-        className={cn(
-          "w-full border-collapse border border-zinc-700 rounded-lg overflow-hidden",
-          className,
-        )}
-        {...props}
-      />
-    </div>
+    <table
+      className={cn(
+        "my-5 w-full border-separate border-spacing-0 overflow-y-auto",
+        className,
+      )}
+      {...props}
+    />
   ),
   th: ({ className, ...props }: { className?: string }) => (
     <th
       className={cn(
-        "bg-zinc-800 border border-zinc-700 px-4 py-2 text-left font-semibold text-zinc-100 [&[align=center]]:text-center [&[align=right]]:text-right",
+        "bg-muted px-4 py-2 text-left font-bold first:rounded-tl-lg last:rounded-tr-lg [&[align=center]]:text-center [&[align=right]]:text-right",
         className,
       )}
       {...props}
@@ -190,7 +358,7 @@ const defaultComponents: any = {
   td: ({ className, ...props }: { className?: string }) => (
     <td
       className={cn(
-        "border border-zinc-700 px-4 py-2 text-left text-zinc-200 [&[align=center]]:text-center [&[align=right]]:text-right",
+        "border-b border-l px-4 py-2 text-left last:border-r [&[align=center]]:text-center [&[align=right]]:text-right",
         className,
       )}
       {...props}
@@ -199,7 +367,7 @@ const defaultComponents: any = {
   tr: ({ className, ...props }: { className?: string }) => (
     <tr
       className={cn(
-        "m-0 border-b border-zinc-700 p-0 even:bg-zinc-900/30",
+        "m-0 border-b p-0 first:border-t [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg",
         className,
       )}
       {...props}
@@ -211,22 +379,10 @@ const defaultComponents: any = {
       {...props}
     />
   ),
-  strong: ({ className, ...props }: { className?: string }) => (
-    <strong
-      className={cn("font-bold text-zinc-100", className)}
-      {...props}
-    />
-  ),
-  em: ({ className, ...props }: { className?: string }) => (
-    <em
-      className={cn("italic text-zinc-200", className)}
-      {...props}
-    />
-  ),
   pre: ({ className, ...props }: { className?: string }) => (
     <pre
       className={cn(
-        "my-4 overflow-x-auto rounded-lg bg-zinc-900 text-white",
+        "max-w-4xl overflow-x-auto rounded-lg ",
         className,
       )}
       {...props}
@@ -247,7 +403,7 @@ const defaultComponents: any = {
       const code = String(children).replace(/\n$/, "");
 
       return (
-        <div className="my-4 rounded-lg overflow-hidden border border-zinc-700">
+        <>
           <CodeHeader
             language={language}
             code={code}
@@ -258,16 +414,13 @@ const defaultComponents: any = {
           >
             {code}
           </SyntaxHighlighter>
-        </div>
+        </>
       );
     }
 
     return (
       <code
-        className={cn(
-          "rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-sm text-zinc-100 border border-zinc-700",
-          className
-        )}
+        className={cn("rounded font-semibold", className)}
         {...props}
       >
         {children}
@@ -276,16 +429,51 @@ const defaultComponents: any = {
   },
 };
 
-export function AgentMarkdown({ content }: { content: string }) {
-  return (
-    <div className="prose prose-invert max-w-none">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-        rehypePlugins={[rehypeHighlight, rehypeAutoLinkHeadings, rehypeKatex]}
-        components={defaultComponents}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
+function preprocessMarkdown(text: string): string {
+  let result = text.replace(/([^\n])(#{1,6}\s)/g, "$1\n\n$2");
+  result = result.replace(/\(\[([^\]]+)\]\((https?:\/\/[^)]+)\)\)/g, "[$1]($2)");
+  return result;
 }
+
+const MarkdownTextImpl: FC<{ children: string; fontSize?: string }> = ({ children, fontSize }) => {
+  const domainGroups = useMemo(() => {
+    const groups = new Map<string, LinkEntry[]>();
+    const linkRegex = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
+    const seenUrls = new Set<string>();
+    let m;
+    while ((m = linkRegex.exec(children)) !== null) {
+      const title = m[1];
+      const url = m[2];
+      if (seenUrls.has(url)) continue;
+      seenUrls.add(url);
+      let domain: string;
+      try {
+        domain = new URL(url).hostname.replace(/^www\./, "");
+      } catch {
+        domain = url;
+      }
+      const list = groups.get(domain) ?? [];
+      list.push({ url, title });
+      groups.set(domain, list);
+    }
+    return groups;
+  }, [children]);
+
+  return (
+    <FontSizeContext.Provider value={fontSize}>
+    <DomainGroupsContext.Provider value={domainGroups}>
+      <div className="markdown-content">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          components={defaultComponents}
+        >
+          {preprocessMarkdown(children)}
+        </ReactMarkdown>
+      </div>
+    </DomainGroupsContext.Provider>
+    </FontSizeContext.Provider>
+  );
+};
+
+export const AgentMarkdown = memo(MarkdownTextImpl) as FC<{ children: string; fontSize?: string }>;

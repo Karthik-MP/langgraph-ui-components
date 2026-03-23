@@ -1,17 +1,20 @@
+import { parsePartialJson } from "@langchain/core/output_parsers";
 import { useStreamContext } from "@/providers/Stream";
+import { useCustomComponents } from "@/providers/CustomComponentProvider";
 import type { chatBodyProps } from "@/types/ChatProps";
 import { logger } from "@/utils/logger";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
+import type { AIMessage, Message } from "@langchain/langgraph-sdk";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AgentMessage from "./messages/AgentMessage";
 import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
 import type { MessageFeedback } from "./messages/MessageActions";
 import Thinking from "./Thinking";
-import ToolCallFunctions from "./ToolCallFunctions";
 
-export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
+export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = true, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
   const stream = useStreamContext();
+  const { interruptComponents } = useCustomComponents();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
 
@@ -57,6 +60,76 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     stream.setBranch(branch);
   }, [stream]);
 
+  // Handler for HITL interrupt responses
+  const handleInterruptRespond = useCallback((response: any) => {
+    stream.submit(null, { command: { resume: response } });
+  }, [stream]);
+
+  // Build interrupt actions for custom renderers
+  const interruptActions = useMemo(() => {
+    const interrupt = stream.interrupt;
+    if (!interrupt) return null;
+    const payload = interrupt.value as any;
+    const actionRequests = payload?.actionRequests ?? [];
+    return {
+      approve: () => {
+        handleInterruptRespond({
+          decisions: actionRequests.map(() => ({ type: "approve" as const })),
+        });
+      },
+      reject: (reason?: string) => {
+        handleInterruptRespond({
+          decisions: actionRequests.map(() => ({
+            type: "reject" as const,
+            message: reason || undefined,
+          })),
+        });
+      },
+      edit: (editedArgs: Record<string, unknown>) => {
+        const action = actionRequests[0];
+        handleInterruptRespond({
+          decisions: [
+            {
+              type: "edit" as const,
+              editedAction: {
+                name: action?.name ?? "",
+                args: { ...action?.args, ...editedArgs },
+              },
+            },
+          ],
+        });
+      },
+    };
+  }, [stream.interrupt, handleInterruptRespond]);
+
+  const getToolCallsFromContent = useCallback((content: Message["content"]): AIMessage["tool_calls"] => {
+    if (!Array.isArray(content)) return [];
+    const toolCallContents = content.filter(
+      (c) => typeof c === "object" && c !== null && (c as any).type === "tool_use" && (c as any).id,
+    ) as Array<Record<string, any>>;
+
+    return toolCallContents.map((tc) => {
+      let args: Record<string, any> = {};
+      if (tc?.input) {
+        if (typeof tc.input === "string") {
+          try {
+            args = parsePartialJson(tc.input) ?? {};
+          } catch {
+            args = {};
+          }
+        } else if (typeof tc.input === "object") {
+          args = tc.input as Record<string, any>;
+        }
+      }
+      return {
+        name: tc.name ?? "",
+        id: tc.id ?? "",
+        args,
+        type: "tool_call",
+      };
+    });
+  }, []);
+
   // Get the parent scroll container
   const getScrollContainer = useCallback(() => {
     if (containerRef.current) {
@@ -81,8 +154,8 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
 
   // Memoize message rendering logic to prevent unnecessary re-renders
   const renderMessage = useCallback((msg: typeof messages[0], index: number, messagesArray: typeof messages) => {
-    // Skip empty content messages UNLESS they have tool calls (which means tool messages will follow)
-    if (!msg.content.length && !isAiWithToolCalls(msg)) return null;
+    const isCurrentlyStreamingMessage = isLoading && index === messagesArray.length - 1 && msg.type === "ai";
+    if (!msg.content.length && !isAiWithToolCalls(msg) && !isCurrentlyStreamingMessage) return null;
 
     if (msg.additional_kwargs?.hidden) {
       return null;
@@ -92,7 +165,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     const msgKey = msg.id ?? `msg-${index}`;
 
     if (msg.type === "human") {
-      return <HumanMessage key={msgKey} message={msg} />;
+      return <HumanMessage key={msgKey} message={msg} fontSize={chatBodyProps?.fontSize} />;
     }
 
     // Skip standalone tool messages
@@ -114,20 +187,17 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       }
     }
 
-    // Collect all consecutive AI messages and tool messages
-    const groupedMessages = [msg];
-    const toolMessages = [];
+    const groupedTimelineMessages: Message[] = [msg];
     let nextIndex = index + 1;
 
     while (nextIndex < messagesArray.length) {
       const nextMsg = messagesArray[nextIndex];
 
       if (isToolMessage(nextMsg)) {
-        toolMessages.push(nextMsg);
+        groupedTimelineMessages.push(nextMsg);
         nextIndex++;
       } else if (nextMsg.type === "ai") {
-        // Combine consecutive AI messages
-        groupedMessages.push(nextMsg);
+        groupedTimelineMessages.push(nextMsg);
         nextIndex++;
       } else {
         // Stop at human messages or other types
@@ -135,58 +205,98 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
       }
     }
 
-    // Combine content from all AI messages
-    const combinedContent = groupedMessages
-      .map(m => {
-        if (typeof m.content === "string") return m.content;
-        if (Array.isArray(m.content)) {
-          return m.content
-            .map((c: any) => c.type === "text" ? c.text : "")
-            .filter(Boolean)
-            .join(" ");
-        }
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n\n");
+    const groupedAiMessages = groupedTimelineMessages.filter((m) => m.type === "ai");
+    const toolMessages = groupedTimelineMessages.filter((m) => isToolMessage(m));
 
-    // Create a combined message object
+    // Merge content from all AI messages, preserving r/reasoning blocks
+    const hasArrayContent = groupedAiMessages.some((m) => Array.isArray(m.content));
+    const mergedContent: Message["content"] = hasArrayContent
+      ? groupedAiMessages.flatMap((m) => {
+          if (Array.isArray(m.content)) return m.content as any[];
+          if (typeof m.content === "string" && m.content.length > 0)
+            return [{ type: "text", text: m.content }];
+          return [];
+        })
+      : groupedAiMessages
+          .map((m) => (typeof m.content === "string" ? m.content : ""))
+          .filter(Boolean)
+          .join("\n\n");
+
+    // Extract plain-text portion for legacy checks (tool-call extraction, etc.)
+    const combinedContent = hasArrayContent
+      ? (mergedContent as any[])
+          .map((c: any) => (c.type === "text" ? (c.text as string) : ""))
+          .filter(Boolean)
+          .join(" ")
+      : (mergedContent as string);
+
+    const toolCallsFromContent = groupedAiMessages
+      .flatMap((m) => {
+        const calls = getToolCallsFromContent(m.content);
+        return calls || [];
+      })
+      .filter((tc): tc is NonNullable<typeof tc> => tc != null && tc !== undefined);
+
+    // Create a combined message object preserving full content (including thinking blocks)
     const combinedMessage = {
       ...msg,
-      content: combinedContent,
+      content: mergedContent,
     };
 
     // Get branch metadata from thread
     const meta = msg ? stream.getMessagesMetadata(msg) : undefined;
-    const displayContent = combinedContent;
+
+    // Determine if there is any displayable content (text OR thinking/reasoning blocks)
+    const hasThinkingContent = hasArrayContent
+      ? (mergedContent as any[]).some(
+          (b: any) =>
+            (b.type === "thinking" && (b.thinking as string)?.length > 0) ||
+            (b.type === "reasoning" && (b.reasoning as string)?.length > 0),
+        )
+      : false;
+    const hasKwargsReasoning =
+      groupedAiMessages.some((m) => {
+        const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+        return typeof ak?.reasoning_content === "string" && (ak.reasoning_content as string).length > 0;
+      });
+    const hasKwargsToolStatus = groupedAiMessages.some((m) => {
+      const ak = (m as Record<string, unknown>).additional_kwargs as Record<string, unknown> | undefined;
+      return Array.isArray(ak?.tool_status) && (ak.tool_status as unknown[]).length > 0;
+    });
+
+    const hasToolCalls =
+      groupedAiMessages.some((m) => isAiWithToolCalls(m)) ||
+      toolCallsFromContent.length > 0 ||
+      toolMessages.length > 0 ||
+      hasKwargsToolStatus;
+
+    const hasAnyDisplayableContent =
+      !!combinedContent ||
+      hasThinkingContent ||
+      hasKwargsReasoning ||
+      (enableToolCallIndicator && hasToolCalls);
 
     const isLastMessageGroup = nextIndex >= messagesArray.length;
     const isStreamingThisMessage = isLoading && isLastMessageGroup;
 
-    // Check if the first message in the group has tool calls
-    const hasToolCalls = isAiWithToolCalls(msg);
-
-    // Show thinking if streaming and no content yet (only tool calls exist)
-    const showThinkingIndicator = isStreamingThisMessage && !displayContent && hasToolCalls;
+    // Show Thinking animation whenever streaming with no displayable content yet (plain chat or tool-call)
+    const showThinkingIndicator = isStreamingThisMessage && !hasAnyDisplayableContent;
 
     return (
       <React.Fragment key={msgKey}>
-        {/* 1. Thinking indicator - show when streaming with no content OR when tool messages exist */}
-        {showThinkingIndicator && enableToolCallIndicator && (
+        {/* 1. Thinking indicator - show when streaming with no content yet (no icon shown) */}
+        {showThinkingIndicator && (
           <Thinking />
         )}
-        {toolMessages.length > 0 && enableToolCallIndicator && hasToolCalls && (
-          <ToolCallFunctions
-            title="Agent Thinking"
-            toolMessages={toolMessages}
-          />
-        )}
-        {/* 2. Agent message (combined content) */}
-        {displayContent && (
+        {/* 2. Agent message — pass full mergedContent and grouped timeline for in-order rendering */}
+        {hasAnyDisplayableContent && (
           <AgentMessage
             agentName={chatBodyProps?.agentName}
+            fontSize={chatBodyProps?.fontSize}
             // agentAvatarUrl={chatBodyProps?.agentAvatarUrl}
-            message={{ ...combinedMessage, content: displayContent }}
+            message={combinedMessage}
+            groupedMessages={groupedTimelineMessages}
+            showToolActivity={enableToolCallIndicator}
             isStreaming={isStreamingThisMessage}
             onRegenerate={handleRegenerate}
             feedback={msg.id ? messageFeedback[msg.id] : undefined}
@@ -197,7 +307,7 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
           />
         )}
         {/* 3. Custom component (from all messages in the group) */}
-        {groupedMessages.map((m) => (
+        {groupedAiMessages.map((m) => (
           <CustomComponentRender key={m.id} message={m} thread={stream} />
         ))}
       </React.Fragment>
@@ -286,11 +396,26 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator, c
     >
       {memoMessages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-zinc-500">
-          Start a conversation...
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin h-5 w-5 border-2 border-zinc-500 border-t-transparent rounded-full" />
+              <span>Loading conversation...</span>
+            </div>
+          ) : (
+            "Start a conversation..."
+          )}
         </div>
       ) : (
         <>
           {renderedMessages}
+          {/* Show HITL interrupt card when agent is paused for approval */}
+          {!isLoading && stream.interrupt && interruptActions && (() => {
+            const payload = stream.interrupt.value as any;
+            const toolName = payload?.actionRequests?.[0]?.name;
+            const InterruptComponent = toolName ? interruptComponents[toolName] : undefined;
+            if (!InterruptComponent) return null;
+            return <InterruptComponent interrupt={payload} actions={interruptActions} />;
+          })()}
           {/* Show thinking indicator when loading and no AI response has started yet */}
           {isLoading && memoMessages.length > 0 && (() => {
             const lastMsg = memoMessages[memoMessages.length - 1];

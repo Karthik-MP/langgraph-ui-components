@@ -33,7 +33,7 @@ export default function Suggestion() {
                         <LiquidButton
                             key={`suggestion-${index}-${suggestion.slice(0, 20)}`}
                             size="sm"
-                            className={`${sizeClass} text-center break-words overflow-hidden`}
+                            className={`${sizeClass} text-center wrap-break-word overflow-hidden`}
                             onClick={handleClick}
                         >
                             <span className="whitespace-normal line-clamp-2 text-white">{suggestion}</span>

@@ -6,10 +6,11 @@ import { useThread } from "@/providers/Thread";
 import type { ChatSidebarProps } from "@/types/ChatProps";
 import type { FileInfo } from "@/types/fileInput";
 import { logger } from "@/utils/logger";
+import { buildContentBlocks, readFilesAsBase64 } from "@/utils/submitUtils";
 import type { Message } from "@langchain/langgraph-sdk";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, PanelLeft, ScanEye, EyeOff } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import ChatBody from "../../components/ChatBody";
 import ChatButton from "../../components/ChatButton";
@@ -44,12 +45,71 @@ import ChatInput from "../../components/sidebar/ChatInput";
  */
 export default function Sidebar(props: ChatSidebarProps) {
 
-  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, supportSpeechToText = false } = props;
+  const { handleFileSelect, callThisOnSubmit, enableToolCallIndicator, header, inputFileAccept, filePreview, s3_upload, preventSubmit, leftPanelContent, leftPanelOpen: externalLeftPanelOpen, setLeftPanelOpen: externalSetLeftPanelOpen, chatBodyProps, supportChatHistory = false, textToSpeechVoice, leftPanelInitialWidth = 30, leftPanelClassName } = props;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [internalLeftPanelOpen, setInternalLeftPanelOpen] = useState(false);
   const [threadHistoryOpen, setThreadHistoryOpen] = useState(false);
   const { fileInput, setFileInput } = useFileProvider();
+
+  // Resize state
+  const [leftPanelWidth, setLeftPanelWidth] = useState(leftPanelInitialWidth);
+  const [sidebarWidth, setSidebarWidth] = useState(30); 
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
+
+  // Handle left panel resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        // For left panel: it extends to the left of the sidebar,
+        // so dragging LEFT (decreasing clientX) should INCREASE width
+        const deltaX = startXRef.current - e.clientX;
+        // Convert to vw
+        const deltaVw = (deltaX / window.innerWidth) * 100;
+        const newLeftPanelWidth = startWidthRef.current + deltaVw;
+        const maxLeftPanelWidth = 40;
+        const minLeftPanelWidth = 30;
+
+        // Clamp the value
+        const clampedWidth = Math.max(minLeftPanelWidth, Math.min(maxLeftPanelWidth, newLeftPanelWidth));
+        setLeftPanelWidth(clampedWidth);
+      } else if (isResizingSidebar && sidebarRef.current) {
+        // For sidebar on right: moving left increases width (handle is on left edge)
+        const deltaX = startXRef.current - e.clientX;
+        // Convert to vw
+        const deltaVw = (deltaX / window.innerWidth) * 100;
+        const newSidebarWidth = startWidthRef.current + deltaVw;
+        const maxSidebarWidth = 50;
+        const minSidebarWidth = 30;
+
+        // Clamp the value
+        const clampedWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, newSidebarWidth));
+        setSidebarWidth(clampedWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingSidebar(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    if (isResizingLeft || isResizingSidebar) {
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isResizingLeft, isResizingSidebar]);
 
   const leftPanelOpen = externalLeftPanelOpen !== undefined ? externalLeftPanelOpen : internalLeftPanelOpen;
   const setLeftPanelOpen = externalSetLeftPanelOpen || setInternalLeftPanelOpen;
@@ -80,7 +140,7 @@ export default function Sidebar(props: ChatSidebarProps) {
 
     // Call the custom upload and get the latest files
     let latestFiles: FileInfo[] = fileInput;
-    let contextValues: Record<string, any> | undefined = undefined;
+    let contextValues: Record<string, unknown> | undefined = undefined;
     if (callThisOnSubmit) {
       const result = await callThisOnSubmit();
       if (Array.isArray(result?.files) && result.files.length > 0) {
@@ -89,29 +149,10 @@ export default function Sidebar(props: ChatSidebarProps) {
       if (result && result?.contextValues) contextValues = result.contextValues;
     }
     logger.debug("Using files for submission:", latestFiles);
-    // Create content blocks based on upload type
-    let contentBlocks: any;
-    if (s3_upload) {
-      // For S3 uploads, send the text input (if any) as a text block
-      // and include each uploaded file as a separate `document` block.
-      contentBlocks = [
-        ...(input.trim().length > 0 ? [{ type: "text", text: input.trim() }] : []),
-        ...latestFiles.map((file) => ({
-          type: "document" as const,
-          source: { filename: file.fileName, filetype: file.fileType },
-        })),
-      ];
-    } else {
-      contentBlocks = [
-        ...(input.trim().length > 0 ? [{ type: "text", text: input }] : []),
-        ...latestFiles.map((file) => ({
-          type: "document" as const,
-          ...file,
-          cache_control: { type: "ephemeral" as const },
-        })),
-      ];
-    }
+
+    const contentBlocks = buildContentBlocks(input, latestFiles, s3_upload);
     logger.debug("Constructed content blocks:", contentBlocks);
+
     const newHumanMessage: Message = {
       id: uuidv4(),
       type: "human",
@@ -130,29 +171,7 @@ export default function Sidebar(props: ChatSidebarProps) {
   ) => {
     const files = event.target.files;
     if (!files) return;
-
-    // Convert files to base64 for sending
-    const fileDetails: FileInfo[] = await Promise.all(
-      Array.from(files).map(async (file) => {
-        const base64Data = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(",")[1]); // Remove data:...;base64, prefix
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        return {
-          fileName: file.name,
-          fileType: file.type,
-          file: file,
-          fileData: base64Data,
-        };
-      })
-    );
-
+    const fileDetails = await readFilesAsBase64(files);
     setFileInput((prevFile) => [...prevFile, ...fileDetails]);
   };
 
@@ -173,8 +192,9 @@ export default function Sidebar(props: ChatSidebarProps) {
 
             {/* Sidebar */}
             <motion.aside
-              className={`fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70 ${threadHistoryOpen ? "w-[calc(25vw+280px)]" : "w-[25vw]"
-                }`}
+              ref={sidebarRef}
+              className="fixed right-0 top-0 z-50 h-screen flex bg-[#0f0f0f] text-white/70"
+              style={{ width: threadHistoryOpen ? `calc(${sidebarWidth}vw + 280px)` : `${sidebarWidth}vw` }}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -183,21 +203,60 @@ export default function Sidebar(props: ChatSidebarProps) {
               <AnimatePresence>
                 {leftPanelOpen && (
                   <motion.div
-                    className="absolute right-full top-0 h-full w-[25vw]"
+                    className="absolute right-full top-0 h-full bg-[#0a0a0a] border-r border-zinc-700"
+                    style={{ width: `${leftPanelWidth}vw` }}
                     initial={{ x: "0" }}
                     animate={{ x: 0 }}
                     exit={{ x: "0%" }}
                     transition={{ type: "spring", stiffness: 400, damping: 40 }}
                   >
-                    {leftPanelContent || (
-                      <>
-                        <h3 className="text-lg font-semibold mb-4 text-white">Left Panel</h3>
-                        <p className="text-zinc-300">This is the left extension panel. You can add any content here.</p>
-                      </>
-                    )}
+                    <div className={`h-full overflow-auto relative${leftPanelClassName ? ` ${leftPanelClassName}` : ""}`}>
+                      {leftPanelContent || (
+                        <>
+                          <h3 className="text-lg font-semibold mb-4 text-white p-4">Left Panel</h3>
+                          <p className="text-zinc-300 p-4">This is the left extension panel. You can add any content here.</p>
+                        </>
+                      )}
+                    </div>
+                    {/* Resize handle for left panel (on left edge) */}
+                    <div
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        startXRef.current = e.clientX;
+                        startWidthRef.current = leftPanelWidth;
+                        setIsResizingLeft(true);
+                      }}
+                      className="absolute left-0 top-0 w-1.5 h-full bg-zinc-700/50 cursor-col-resize transition-colors z-[60] hover:w-2 group"
+                      style={{ touchAction: 'none' }}
+                    >
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-60 group-hover:opacity-100">
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
+              {/* Resize handle for sidebar */}
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  startXRef.current = e.clientX;
+                  startWidthRef.current = sidebarWidth;
+                  setIsResizingSidebar(true);
+                }}
+                className="absolute left-0 top-0 w-1.5 h-full bg-zinc-700/50 cursor-col-resize transition-colors z-[60] hover:w-2 group"
+                style={{ touchAction: 'none' }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-60 group-hover:opacity-100">
+                  <div className="w-1 h-1 rounded-full bg-white"></div>
+                  <div className="w-1 h-1 rounded-full bg-white"></div>
+                  <div className="w-1 h-1 rounded-full bg-white"></div>
+                </div>
+              </div>
               <div className="flex h-full flex-col flex-1">
                 <div className="flex py-3 px-6 justify-between items-center border-b border-zinc-700/30">
                   <div className="flex items-center gap-3">
@@ -255,9 +314,9 @@ export default function Sidebar(props: ChatSidebarProps) {
                     input={input}
                     inputFileAccept={inputFileAccept}
                     setInput={setInput}
-                    supportSpeechToText={supportSpeechToText}
+                    textToSpeechVoice={textToSpeechVoice}
                     handleSubmit={defaultHandleSubmit}
-                    isLoading={isLoading}
+                    isLoading={isLoading || !!preventSubmit}
                     fileInput={fileInput}
                     handleFileSelect={onFileSelect}
                     setFileInput={setFileInput}
@@ -265,7 +324,8 @@ export default function Sidebar(props: ChatSidebarProps) {
                     filePreview={filePreview}
                   />
                 </div>
-              </div>              <AnimatePresence>
+              </div>
+              <AnimatePresence>
                 {threadHistoryOpen && (
                   <motion.div
                     className="h-full w-[280px] shadow-2xl border-l border-white/10"
@@ -277,7 +337,8 @@ export default function Sidebar(props: ChatSidebarProps) {
                     <ThreadHistory isSidebar={true} header={{ title: "Sessions" }} onClose={() => setThreadHistoryOpen(false)} />
                   </motion.div>
                 )}
-              </AnimatePresence>            </motion.aside>
+              </AnimatePresence>
+            </motion.aside>
           </>
         )}
       </AnimatePresence>
