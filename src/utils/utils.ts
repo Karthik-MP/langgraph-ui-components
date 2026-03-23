@@ -8,6 +8,7 @@ import type { AIMessage, Message } from "@langchain/langgraph-sdk";
  */
 export function getContentString(content: Message["content"]): string {
   if (typeof content === "string") return content;
+  if (!content || !Array.isArray(content)) return "";
   const texts = content
     .filter((c): c is { type: "text"; text: string } => c.type === "text")
     .map((c) => c.text);
@@ -19,9 +20,14 @@ export function isAIMessage(message: Message): message is AIMessage {
 }
 
 export function isAiWithToolCalls(message: Message) {
-  return (
-    isAIMessage(message) && message.tool_calls && message.tool_calls.length > 0
-  );
+  if (!isAIMessage(message)) return false;
+  if (message.tool_calls && message.tool_calls.length > 0) return true;
+  if (Array.isArray(message.content)) {
+    return message.content.some(
+      (c) => typeof c === "object" && c !== null && "type" in c && (c as any).type === "tool_use",
+    );
+  }
+  return false;
 }
 
 export function isToolMessage(message: Message) {
