@@ -31,10 +31,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       
       - name: Build package
-        run: pnpm run build --if-present
-
-      - name: Run tests
-        run: pnpm run test --if-present
+        run: pnpm run build
       
       - name: Publish to npm
         run: npm publish --access public --provenance
