@@ -1,7 +1,7 @@
 {
   "name": "langgraph-ui-components",
   "private": false,
-  "version": "0.0.28",
+  "version": "0.0.29",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Karthik-MP/langgraph-ui-components.git"
