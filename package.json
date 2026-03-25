@@ -2,6 +2,14 @@
   "name": "langgraph-ui-components",
   "private": false,
   "version": "0.0.28",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Karthik-MP/langgraph-ui-components.git"
+  },
+  "homepage": "https://github.com/Karthik-MP/langgraph-ui-components#readme",
+  "bugs": {
+    "url": "https://github.com/Karthik-MP/langgraph-ui-components/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.es.js",
