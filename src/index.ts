@@ -44,6 +44,13 @@ export type {
   headerProps,
   textToSpeechVoice,
 } from "./types/ChatProps";
+export type {
+  AskUserInterruptProps,
+  AskUserResponse,
+  Question,
+  QuestionAnswer,
+  QuestionOption,
+} from "./types/AskUserInterrupt";
 
 // ─── Types: Domain objects ────────────────────────────────────────────────────
 export type { FileInfo } from "./types/fileInput";
