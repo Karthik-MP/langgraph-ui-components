@@ -1,5 +1,6 @@
 import { useStreamContext } from "@/providers/Stream";
 import { useCustomComponents } from "@/providers/CustomComponentProvider";
+import { useThread } from "@/providers/Thread";
 import type { chatBodyProps } from "@/types/ChatProps";
 import { logger } from "@/utils/logger";
 import { isAiWithToolCalls, isToolMessage } from "@/utils/utils";
@@ -7,6 +8,7 @@ import type { Message } from "@langchain/langgraph-sdk";
 import type { TodoItem } from "@/providers/Stream";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AgentMessage from "./messages/AgentMessage";
+import AskUserInterrupt from "./AskUserInterrupt";
 import CustomComponentRender from "./messages/CustomComponentRender";
 import HumanMessage from "./messages/HumanMessage";
 import type { MessageFeedback } from "./messages/MessageActions";
@@ -15,6 +17,7 @@ import Thinking from "./Thinking";
 export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = true, chatBodyProps }: { setIsFirstMessage?: React.Dispatch<React.SetStateAction<boolean>>, enableToolCallIndicator?: boolean, chatBodyProps?: chatBodyProps }) {
   const stream = useStreamContext();
   const { interruptComponents } = useCustomComponents();
+  const { threadId } = useThread();
   const messages = stream.messages;
   const isLoading = stream.isLoading;
 
@@ -118,8 +121,40 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
     stream.setBranch(branch);
   }, [stream]);
 
+  // Guard against re-showing the interrupt card during the brief window
+  // between when the user submits a resume and when history refetches the new
+  // checkpoint. The SDK can temporarily restore the old interrupt value from
+  // historyValues during this gap, causing a flash. We suppress the card for
+  // the exact interrupt value that was just responded to.
+  //
+  // The key is reset when:
+  //  - A different thread is opened (threadId changes)
+  //  - The interrupt disappears with isLoading=true (new stream fully started)
+  const respondedInterruptKeyRef = useRef<string>("");
+  const prevThreadIdRef = useRef<string | null | undefined>(null);
+
+  // Reset when the thread changes so a new thread with the same questions shows correctly.
+  useEffect(() => {
+    if (prevThreadIdRef.current !== null && prevThreadIdRef.current !== threadId) {
+      respondedInterruptKeyRef.current = "";
+    }
+    prevThreadIdRef.current = threadId;
+  }, [threadId]);
+
+  // Reset once a new stream is flowing (isLoading=true and interrupt is gone).
+  // By this point the re-appearance window is closed and we no longer need to suppress.
+  useEffect(() => {
+    if (isLoading && !stream.interrupt && respondedInterruptKeyRef.current !== "") {
+      respondedInterruptKeyRef.current = "";
+    }
+  }, [isLoading, stream.interrupt]);
+
   // Handler for HITL interrupt responses
   const handleInterruptRespond = useCallback((response: any) => {
+    // Fingerprint the current interrupt so we can suppress it if it briefly
+    // re-appears from historyValues while the resume stream is starting.
+    const key = JSON.stringify(stream.interrupt?.value ?? null);
+    respondedInterruptKeyRef.current = key;
     stream.submit(null, {
       command: { resume: response },
       streamMode: ["values", "messages-tuple", "updates", "custom"],
@@ -509,12 +544,39 @@ export default function ChatBody({ setIsFirstMessage, enableToolCallIndicator = 
             memoMessages[memoMessages.length - 1].type === "human" && (
               <Thinking />
             )}
-          {!isLoading && stream.interrupt && interruptActions && (() => {
+          {stream.interrupt && (() => {
             const payload = stream.interrupt.value as any;
-            const toolName = payload?.actionRequests?.[0]?.name;
-            const InterruptComponent = toolName ? interruptComponents[toolName] : undefined;
-            if (!InterruptComponent) return null;
-            return <InterruptComponent interrupt={payload} actions={interruptActions} />;
+
+            // Suppress the card if this is the same interrupt the user already
+            // responded to (it can briefly re-appear from history while the
+            // resume stream is still in-flight before history refetches).
+            const currentKey = JSON.stringify(payload ?? null);
+            if (currentKey === respondedInterruptKeyRef.current && respondedInterruptKeyRef.current !== "") {
+              return null;
+            }
+
+            // Check consumer-registered override first, then fall back to built-in.
+            if (payload?.type === "ask_user" && Array.isArray(payload.questions)) {
+              const CustomAskUser = interruptComponents["ask_user"];
+              if (CustomAskUser) {
+                return <CustomAskUser interrupt={payload} actions={interruptActions ?? { approve: () => {}, reject: () => {}, edit: () => {} }} />;
+              }
+              return (
+                <AskUserInterrupt
+                  questions={payload.questions}
+                  onSubmit={(response) => handleInterruptRespond(response)}
+                />
+              );
+            }
+
+            if (interruptActions) {
+              const toolName = payload?.actionRequests?.[0]?.name;
+              const InterruptComponent = toolName ? interruptComponents[toolName] : undefined;
+              if (!InterruptComponent) return null;
+              return <InterruptComponent interrupt={payload} actions={interruptActions} />;
+            }
+
+            return null;
           })()}
         </>
       )}
