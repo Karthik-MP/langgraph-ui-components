@@ -52,7 +52,7 @@ function App() {
 Use subpath imports for best auto-import support in VS Code and TypeScript:
 
 ```tsx
-import { Sidebar, Chat } from 'langgraph-ui-components/components';
+import { Sidebar, Chat, AskUserInterrupt } from 'langgraph-ui-components/components';
 import {
   ChatProvider,
   ChatRuntimeProvider,
@@ -71,6 +71,13 @@ import {
   useTools,
   useModels,
 } from 'langgraph-ui-components/hooks';
+import type {
+  AskUserInterruptProps,
+  AskUserResponse,
+  Question,
+  QuestionAnswer,
+  QuestionOption,
+} from 'langgraph-ui-components/components';
 import 'langgraph-ui-components/styles.css';
 ```
 
@@ -78,6 +85,7 @@ Root import is also supported for backward compatibility:
 
 ```tsx
 import { Sidebar, ChatProvider, useStreamContext } from 'langgraph-ui-components';
+import type { AskUserInterruptProps, AskUserResponse } from 'langgraph-ui-components';
 ```
 
 ### Speech-to-Text Configuration
@@ -119,6 +127,7 @@ The microphone button in the ChatInput component will automatically use these se
 
 - `Sidebar` - Main chat UI with sidebar navigation
 - `Chat` - Standalone chat interface with thread history
+- `AskUserInterrupt` - Built-in UI for `ask_user` HITL questions
 
 ## Component Props
 
@@ -638,6 +647,98 @@ function App() {
 ```
 
 Or register via `ChatProvider`'s `customComponents` if you prefer props-based setup (note: this is for generative UI components — for interrupts, use `registerInterruptComponent` as above).
+
+### `ask_user` Interrupts (Built-in)
+
+For question/answer style interruptions, the library includes a ready-to-use `AskUserInterrupt` renderer.
+
+If your interrupt payload has `type: "ask_user"` and a `questions` array, `ChatBody` renders the built-in component automatically.
+
+#### Agent-side format (`ask_user`)
+
+```python
+from langgraph.types import interrupt
+
+interrupt({
+    "type": "ask_user",
+    "questions": [
+        {
+            "header": "Environment",
+            "question": "Which environment should I deploy to?",
+            "options": [
+                {"label": "Staging", "description": "Safe pre-production run"},
+                {"label": "Production", "description": "Live users"}
+            ],
+            "allowFreeformInput": True,
+            "multiSelect": False,
+        }
+    ]
+})
+```
+
+#### TypeScript types
+
+```ts
+import type {
+  AskUserInterruptProps,
+  AskUserResponse,
+  Question,
+  QuestionAnswer,
+  QuestionOption,
+} from 'langgraph-ui-components/components';
+
+// also available from root:
+// import type { AskUserInterruptProps, AskUserResponse } from 'langgraph-ui-components';
+```
+
+`AskUserInterruptProps` shape:
+
+```ts
+interface AskUserInterruptProps {
+  questions: Question[];
+  onSubmit: (response: AskUserResponse) => void;
+}
+```
+
+#### Overriding `ask_user` UI
+
+You can override the default card by registering an interrupt component under the `ask_user` key:
+
+```tsx
+import { useEffect } from 'react';
+import { useCustomComponents } from 'langgraph-ui-components/providers';
+import type { InterruptComponentProps } from 'langgraph-ui-components/providers';
+
+function MyAskUserInterrupt({ interrupt, actions }: InterruptComponentProps) {
+  return (
+    <div>
+      <h3>Need your input</h3>
+      <pre>{JSON.stringify(interrupt.questions, null, 2)}</pre>
+      <button
+        onClick={() =>
+          actions.edit({
+            answers: {
+              Environment: { selected: ["Staging"], freeText: null, skipped: false },
+            },
+          })
+        }
+      >
+        Submit
+      </button>
+    </div>
+  );
+}
+
+function RegisterAskUserInterrupt() {
+  const { registerInterruptComponent } = useCustomComponents();
+
+  useEffect(() => {
+    registerInterruptComponent('ask_user', MyAskUserInterrupt);
+  }, [registerInterruptComponent]);
+
+  return null;
+}
+```
 
 ### `InterruptComponentProps`
 
