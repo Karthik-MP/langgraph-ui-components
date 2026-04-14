@@ -70,6 +70,10 @@ import {
 import {
   useTools,
   useModels,
+  useRenderToolCall,
+  useRegisterToolCallRenderer,
+  ToolCallRendererProvider,
+  ToolCallStatus,
 } from 'langgraph-ui-components/hooks';
 import type {
   AskUserInterruptProps,
@@ -207,6 +211,8 @@ All from `langgraph-ui-components/providers` unless noted:
 | `useChatSuggestions()` | Opt-in chat suggestions — [details](#usechatsuggestions-hook) |
 | `useTools()` *(hooks)* | Sidebar tool buttons — [details](#usetools) |
 | `useModels()` *(hooks)* | Model list and selection — [details](#usemodels) |
+| `useRenderToolCall()` *(hooks)* | Resolve tool calls to React elements — [details](#userendertoolcall) |
+| `useRegisterToolCallRenderer()` *(hooks)* | Register a render function for a tool name — [details](#userendertoolcall) |
 
 ## useChatSuggestions Hook
 
@@ -497,6 +503,99 @@ type CustomTool = {
   onClick: () => void;            // click handler
 };
 ```
+
+## useRenderToolCall
+
+Resolves tool calls to React elements by looking up registered renderers.  
+In most apps you won't call `useRenderToolCall` directly — you register renderers with `useRegisterToolCallRenderer` and the chat components call it internally. Use it directly only when building custom message renderers.
+
+### Setup
+
+Wrap your chat UI in `ToolCallRendererProvider` (typically alongside `ChatRuntimeProvider`):
+
+```tsx
+import {
+  ToolCallRendererProvider,
+  useRegisterToolCallRenderer,
+  ToolCallStatus,
+} from 'langgraph-ui-components/hooks';
+import { ChatProvider } from 'langgraph-ui-components/providers';
+
+function App() {
+  return (
+    <ChatProvider apiUrl="..." assistantId="...">
+      <ToolCallRendererProvider>
+        <MyChat />
+      </ToolCallRendererProvider>
+    </ChatProvider>
+  );
+}
+```
+
+### Registering renderers
+
+Call `useRegisterToolCallRenderer` once per tool name. Use `"*"` as a catch-all for any tool without a dedicated renderer:
+
+```tsx
+import { useRegisterToolCallRenderer, ToolCallStatus } from 'langgraph-ui-components/hooks';
+
+function ToolRenderers() {
+  // Exact match — only called for "web_search" tool calls
+  useRegisterToolCallRenderer("web_search", (args, result, status) => (
+    <div className="tool-card">
+      <p>Searching: {String(args.query)}</p>
+      {status === ToolCallStatus.Complete && <p>Result: {result}</p>}
+      {status === ToolCallStatus.InProgress && <span>Loading…</span>}
+    </div>
+  ));
+
+  // Wildcard — fallback for any unregistered tool
+  useRegisterToolCallRenderer("*", (_args, _result, status) => (
+    <span className="badge">
+      {status === ToolCallStatus.Complete ? "Done" : "Running…"}
+    </span>
+  ));
+
+  return null;
+}
+```
+
+### Using the resolver directly
+
+```tsx
+import { useRenderToolCall } from 'langgraph-ui-components/hooks';
+
+function MyMessageRenderer({ toolCall, toolMessage, isLoading }) {
+  const renderToolCall = useRenderToolCall();
+
+  return (
+    <div>
+      {renderToolCall({ toolCall, toolMessage, isLoading })}
+    </div>
+  );
+}
+```
+
+### Status values
+
+| Value | When |
+|-------|------|
+| `ToolCallStatus.InProgress` | `isLoading=true`, no `toolMessage` — arguments still streaming |
+| `ToolCallStatus.Executing` | `isLoading=false`/omitted, no `toolMessage` — tool is running |
+| `ToolCallStatus.Complete` | `toolMessage` present — execution finished |
+
+### Types
+
+```typescript
+import type {
+  ToolCallType,          // { name, args, id?, type? }
+  ToolMessageType,       // { type: "tool", content, tool_call_id?, id? }
+  ToolCallRenderFn,      // (args, result, status) => ReactElement | null
+  UseRenderToolCallProps, // { toolCall, toolMessage?, isLoading? }
+} from 'langgraph-ui-components/hooks';
+```
+
+---
 
 ## useModels
 
@@ -924,6 +1023,10 @@ Full TypeScript definitions available for:
 - `InterruptComponentProps` — props for HITL interrupt components
 - `CustomTool` — `{ label, icon, alt?, onClick }`
 - `ModelOption` — `{ id, name }`
+- `ToolCallType` — `{ name, args, id?, type? }`
+- `ToolMessageType` — `{ type: "tool", content, tool_call_id?, id? }`
+- `ToolCallRenderFn` — `(args, result, status) => ReactElement | null`
+- `UseRenderToolCallProps` — `{ toolCall, toolMessage?, isLoading? }`
 - `ChatProps` — base props shared by Chat and Sidebar
 - `ChatSidebarProps` — Sidebar-specific props (extends ChatProps)
 - `ChatUIProps` — Chat-specific props (extends ChatProps)
